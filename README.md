@@ -45,3 +45,19 @@ We have included the processed datasets needed to run our experiments in this re
 
 `data/100_profiles.csv` contains the profiles, including direct and indirect identifiers, used to generate benchmark entries.
 `data/population_sample.csv` contains the 3M sample of [US census data](https://www.census.gov/programs-surveys/acs/microdata/access/2010.html), preprocessed to account for weighting of each row.
+
+# Running experiments
+
+We have included 100 benchmark entries per level in the `benchmark` folder in this repo. To run a new generation, run:
+```bash
+sh scripts/generate/level_{LEVEL}.sh
+```
+for the desired level of difficulty.
+
+Anonymization scripts are included in `scripts/anonymize`, and attacker scripts are included in `scripts/attack`.
+
+A full run of the pipeline for one difficulty level, from generation to re-identification rate computation, can be achieved by running the following:
+
+1. `sh scripts/generate/level_1.sh`
+2. `sh scripts/anonymize/level_1.sh`
+3. `sh scripts/attack/level_1.sh`
