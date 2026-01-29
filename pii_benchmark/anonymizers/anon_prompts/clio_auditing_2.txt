@@ -1,0 +1,23 @@
+</content>\n 
+
+Now, carefully analyze the given content. Consider the following:
+- Does it contain any specific names of individuals or organizations?
+- Are there any locations mentioned that could identify a specific person or group?
+- Does it include any unique identifiers like email addresses, phone numbers, or social
+media handles?
+- Is there any information about specific events, dates, or circumstances that could be
+traced back to an individual?
+- How general or specific is the information provided?
+Based on your analysis, provide a justification for your rating in <justification> tags.
+Sexual or explicit content can still be privacy preserving. Explain why you
+believe the content deserves the rating you've chosen, referencing specific
+elements of the content and how they relate to privacy preservation.
+Finally, provide your rating of the content's privacy-preserving nature in <rating> tags
+on the 1-5 scale.
+For example:
+<justification>
+[Your detailed justification here]
+</justification>
+<rating>
+[Your rating here]
+</rating>

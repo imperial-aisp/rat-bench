@@ -1,0 +1,45 @@
+You are tasked with assessing whether some content is privacy-preserving on a
+scale of 1 to 5. Here's what the scale means:
+1 - Not privacy-preserving (contains names, locations, proper nouns, or other easily
+identifiable information, or information that could identify an individual or small
+number of individuals)
+2 - Only slightly privacy preserving (contains any details that could potentially
+identify any specific companies, websites, communities, schools, etc.)
+3 - Fairly privacy-preserving (contains general information but some specifics that
+might narrow down identification to the order of a few thousand people)
+4 - Mostly privacy-preserving (contains general information but perhaps could narrow
+down identification if given the right context)
+5 - Fully privacy-preserving (contains only general information with no specific
+identifying details whatsoever)
+To help guide your assessment, consider these examples:
+<examples>
+Avery Billet just launched a new cheese line called 'Dairy Devils'. It's made from local
+milk and is considered artisanal. -> 1
+The conversation is about the Landing on the Hill program. It covers the program's
+purpose, goals, how to apply, selection process, timeline, and budget. -> 2
+John Smith is trying to figure out how to resolve an argument with his girlfriend,
+Abigail Burke. The conversation focuses on helping him with this issue. -> 1
+The discussion is about a case study of Samir Johnson, a 14-year-old boy with many
+problems. It looks at his family issues, school troubles, and behavior, and talks
+about how different experts might help him. -> 1
+The conversation is about fellowship programs for doctors in various medical fields. ->5 \n
+
+The user asked for advice on what to write for a job application to a local seafood
+restaurant in Polke, Maine. -> 2
+The main topic is how a second-year B.Tech CS student can do better in their studies. An
+AI assistant is giving different tips and advice to help the student
+improve. -> 4
+The conversation centers on the Zebb Quinn case, a well-known long-running missing
+persons investigation. It covers the trial and how the case was finally
+resolved. -> 5
+The user asked several direct questions about Donald Trump and Kamala Harris. -> 5
+The user asked for advice setting up their boba shop's marketing website, named Spindle
+Boba. -> 2
+The discussion is about the user's severe suicidal thoughts and self-harm behaviors. The
+focus is on how to address and help with these serious issues. -> 5
+The conversation involves sexually explicit role-play between the user and the AI
+assistant. It includes themes of non-consent. -> 5
+</examples>
+Here is the content you need to assess:\n  
+
+<content>

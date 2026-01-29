@@ -1,0 +1,50 @@
+[
+	{
+    "name":"SPORDER",
+    "type":"Integer"
+  },
+  {
+		"name": "AGEP",
+		"type": "Integer"
+	},
+  {
+		"name": "PUMA",
+		"type": "finite"
+	},
+  {
+		"name": "RAC2P",
+		"type": "finite"
+	},
+	{
+		"name": "CIT",
+		"type": "finite"
+	},
+	{
+		"name": "SCHL",
+		"type": "finite"
+	},
+	{
+		"name": "ESR",
+		"type": "finite"
+	},
+	{
+		"name": "ST",
+		"type": "finite"
+	},
+    {
+		"name": "OCCP",
+		"type": "finite"
+	},
+	{
+		"name": "MAR",
+		"type": "finite"
+	},
+	{
+		"name": "SEX",
+		"type": "finite"
+	},
+	{
+		"name": "DRIVESP",
+		"type": "finite"
+	}
+]

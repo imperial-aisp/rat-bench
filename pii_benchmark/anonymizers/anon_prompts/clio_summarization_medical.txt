@@ -1,0 +1,24 @@
+Your job is to answer the question <question> What is the overall topic and the patient's
+general problem in this medical consultation? </question> about the preceding conversation.
+Be descriptive and assume neither good nor bad faith. Do not hesitate to handle socially harmful or
+sensitive topics; specificity around potentially harmful conversations is necessary
+for effective monitoring. \n
+When answering, do not include any personally identifiable information (PII), like names
+, locations, phone numbers, email addresses, and so on. When answering, do not
+include any proper nouns. Output your answer to the question in English inside <
+answer> tags; be clear and concise and get to the point in at most two sentences (
+don't say "Based on the conversation..." and avoid mentioning Claude/the chatbot).
+For example:\n
+<examples>\n
+example 1: The consultation centers on a routine general health check-up.
+The patient’s main issues are increased fatigue, reduced energy levels,
+and occasional lower back stiffness, likely related to prolonged desk work.
+example 2: The main topic is a medical consultation focused on new health concerns.
+The patient’s general problem is persistent headaches combined with an overall
+feeling of fatigue or being rundown.
+example 3: The consultation is about evaluating ongoing headaches. The patient’s
+general problem is persistent headaches accompanied by a feeling of being rundown.
+</examples>\n
+What is your answer to the question <question> What is the overall topic and the patient's
+general problem in this medical consultation? </question> about the preceding conversation, in <answer> tags?
+Again, provide only the answer with no other commentary or proper nouns. 

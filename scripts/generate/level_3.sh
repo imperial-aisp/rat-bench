@@ -1,0 +1,12 @@
+python3 generator.py --output_file="./benchmark/level_3.jsonl" \
+                    --requests_per_min=60 \
+                    --no_of_entries=100 \
+                    --n_processors=10 \
+                    --difficulty=3 \
+                    --seed_dataset="PUMS" \
+                    --seed_dataset_link="data/100_profiles.csv" \
+                    --seed_dataset_metadata="data/PUMS2010_metadata.json" \
+                    --sample_features=5 \
+                    --sample_identifiers=1 \
+                    --llm="chatgpt" \
+                    --scenario="random"
