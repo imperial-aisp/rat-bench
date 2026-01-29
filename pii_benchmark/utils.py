@@ -376,16 +376,9 @@ def fix_and_load_json(s: str):
 def load_data(data_path, scenario, difficulty):
     profiles = []
     
-    # If no data path provided, load from hugging face
-    if (data_path == None):
-        ds = load_dataset("imperial-cpg/text_anonymization_benchmark", f"{scenario}_data")
-        for entry in ds["train"]:
-            if (entry["difficulty"] == difficulty):
-                profiles.append(entry)
-    else:
-        with open(data_path) as f:
-            for l in f:
-                profiles.append(json.loads(l))
+    with open(data_path) as f:
+        for l in f:
+            profiles.append(json.loads(l))
     return profiles
 
 # Write synthetic records to output file.

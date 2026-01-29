@@ -6,7 +6,7 @@ import os
 
 ## everything for name generation
 # let's always load the data just once
-PATH_TO_DATA = "/data/matthieu/pii_benchmark/llm_anon_benchmark/data/"
+PATH_TO_DATA = "./data/"
 
 FIRST_NAME_DF = pd.read_csv(os.path.join(PATH_TO_DATA, "first_name_all_years.csv"))
 LAST_NAME_DF = pd.read_csv(os.path.join(PATH_TO_DATA, "last_name.csv"))
