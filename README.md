@@ -2,7 +2,10 @@
 <p align="center">
 <img src="Rat_Bench.png" width="500" align="center">
 </p>
-Benchmark for evaluating PII removal and text anonymization tools, with a focus on **re-identification risk**.
+
+Benchmark for evaluating PII removal and text anonymization tools for the paper [RAT-Bench](), with a focus on **re-identification risk**. 
+
+Our [benchmark dataset](https://huggingface.co/datasets/imperial-cpg/text_anonymization_benchmark) is openly accessible. We also maintain an [extendable leaderboard](https://huggingface.co/spaces/imperial-cpg/text-anon-reid) of text anonymization tools.
 
 # ⚙️ Installation
 
@@ -43,7 +46,7 @@ Add your API keys inside ``credentials.py``.
 
 # ⚙️ Data
 
-We have included the processed datasets needed to run our experiments in this repo:
+We have included the processed datasets needed to generate the benchmark and run our experiments in this repo:
 
 `data/100_profiles.csv` contains the profiles, including direct and indirect identifiers, used to generate benchmark entries.
 `data/population_sample.csv` contains the 3M sample of [US census data](https://www.census.gov/programs-surveys/acs/microdata/access/2010.html), preprocessed to account for weighting of each row.
@@ -54,7 +57,7 @@ We have included 100 benchmark entries per level in the `benchmark` folder in th
 ```bash
 sh scripts/generate/level_{LEVEL}.sh
 ```
-for the desired level of difficulty.
+for the desired level of difficulty. You can also instead obtain our generated benchmark dataset [here](https://huggingface.co/datasets/imperial-cpg/text_anonymization_benchmark).
 
 Anonymization scripts are included in `scripts/anonymize`, and attacker scripts are included in `scripts/attack`.
 
