@@ -1,4 +1,4 @@
-# 📚 RAT-Bench
+# RAT-Bench :rat:
 
 Benchmark for evaluating PII removal and text anonymization tools, with a focus on **re-identification risk**.
 
