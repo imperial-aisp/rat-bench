@@ -328,6 +328,7 @@ OTHER_LANGUAGE_FOOTER = """
     Although the target attributes, their values, and examples are provided above in English, they should be fully translated and adapted to <TARGET_LANGUAGE>. 
     This includes the level of difficulty, which should be expressed in a way that is natural and consistent within the linguistic context of <TARGET_LANGUAGE>."""
 
+### Prompt creation helper functions ###
 def get_scenario(scenario) -> str:
     return SCENARIO[scenario]
 
@@ -420,9 +421,6 @@ def create_generative_prompt(
     prompt_information = prompt_information.replace(
         "<DIFFICULTY LEVEL>", str(difficulty)
     )
-    # prompt_information = prompt_information.replace(
-    #     "<TARGET ATTRIBUTES>", get_target_attributes(features, dataset=dataset)
-    # )
 
     prompt_information = prompt_information.replace(
         "<EXAMPLES>", get_examples(difficulty, features)

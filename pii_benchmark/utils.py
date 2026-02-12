@@ -85,8 +85,6 @@ att_names = [
     "US SSN"
 ]
 
-# alt_att_names = {s:"_".join(s.split(" ")) for s in att_names}
-
 
 def get_pums_values(attribute: str) -> str:
     with open(f"{PUMS_MAPS_PATH}{attribute}_map.pickle", "rb") as f:
@@ -207,9 +205,6 @@ def parse_output_gpt(response):
             elements = curr_line.split(":")
             key = elements[0].strip(' ",\'')
             if key in att_names:
-
-                # if key in alt_att_names:
-                #     key = alt_att_names[key]
                     
                 curr_guess_dict = dict()
                 
@@ -369,9 +364,7 @@ def fix_and_load_json(s: str):
                         f"Could not fix JSON:\n--- Fixed candidate string ---\n{s}"
                     )
                     return fixed_str
-                    raise ValueError(
-                        f"Could not fix JSON: {e}\n--- Fixed candidate string ---\n{s}"
-                    )
+
 
 def load_data(data_path, scenario, difficulty):
     profiles = []

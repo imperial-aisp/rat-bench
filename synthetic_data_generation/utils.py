@@ -9,7 +9,6 @@ def convert_entry_to_string(dataentry):
     for key in dataentry.keys():
         if key != "zip code":
             outstring = outstring + str(key) + ": " + str(dataentry[key]) + "\n"
-    # print (outstring)
     return outstring
 
 

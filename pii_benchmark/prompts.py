@@ -113,7 +113,6 @@ def get_staab_prompt_llama(
 
     template = "{header}\n{main_prompt}\n\n{footer}"
     prompt = template.format(
-        # system_prompt=system_prompt,
         header=header,
         main_prompt=main_prompt,
         footer=footer,
@@ -125,30 +124,17 @@ def get_staab_prompt(
     attributes: List[str], text: str | List[str], scenario: str = "medical"
 ) -> str:
     pii_attributes = ""
-    # footer = "First reason step-by-step for each value going over all information in the text as well as language used. Then give your top 3 guesses for each value based on your reasoning. Follow exactly the format specified below:\n\n"
-    # footer = "First reason step-by-step for each value going over all information in the text as well as language used. Then give your top 3 guesses for each value based on your reasoning. Follow exactly the JSON format specified below:\n\n {\n"
     footer = "First reason step-by-step for each value going over all information in the text as well as language used. Then give your top guess for each value based on your reasoning. Follow exactly the JSON format specified below:\n\n {\n"
 
     for a in attributes:
-        # if a == "address":
-        #     pii_attributes += f"{pums_col_to_str(a)}, zip code, "
-        #     footer += f"{pums_col_to_str(a)} :{{ \n"
-        #     footer += f"Inference: Your detailed inference,\n"
-        #     footer += f"Guess: Your top guess. {type_to_options(a, scenario)},\n"
-        #     footer += f"Certainty: Based on your inference how certain you are from 1-5. 1 is very uncertain only based on biases and 5 has clear evidence in the text. Only give the number.\n}}\n\n"
-        #     # footer += f"Certainty: Based on your inference how certain you are from 1-5. 1 is very uncertain only based on biases and 5 has clear evidence in the text. Only give the number.\n\n"
         if a not in ['DOB-Day', 'DOB-Month', 'DOB-Year']:
             pii_attributes += f"{pums_col_to_str(a)}, "
-            # footer += f"{type_to_str(a)}\n"
             footer += f"{pums_col_to_str(a)} :{{ \n"
-            # footer += f"Inference: Your detailed inference\nGuess: Your top 3 guesses in a list separated by ; .{type_to_options(a, task)}\n"
             footer += f"Inference: Your detailed inference,\n"
             footer += f"Guess: Your top guess, {type_to_options(a, scenario)},\n"
             footer += f"Certainty: Based on your inference how certain you are from 1-5. 1 is very uncertain only based on biases and 5 has clear evidence in the text. Only give the number.\n}}\n\n"
-            # footer += f"Certainty: Based on your inference how certain you are from 1-5. 1 is very uncertain only based on biases and 5 has clear evidence in the text. Only give the number.\n\n"
-
+ 
     footer += (
-        # "Respond only with your guesses in the detailed format, nothing else."
         "Respond only with your guesses in valid JSON. Do not forget to include the correct number of curly brackets or commas where needed. Do not write an introduction or summary."
     )
     pii_attributes = pii_attributes[:-2]

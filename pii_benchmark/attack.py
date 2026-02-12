@@ -117,7 +117,6 @@ if __name__=="__main__":
         only_check_correctness(profiles)
     else:
         print("Running attack from scratch")
-        # attack(profiles, ATTACKER, MODEL_VERSION, SCENARIO)
         if RESULTS_PATH is not None:
             PATH_TO_SAVE = RESULTS_PATH
         else:

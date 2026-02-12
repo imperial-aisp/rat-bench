@@ -72,6 +72,7 @@ def get_pums_profile(sample, cols):
     for col in cols:
         print(f"Processing column: {col}")
         
+        # Direct identifiers and DOB are unencoded and do not need a mapping to recover the original value
         if col == "identifiers" or col == "name" or col == "SSN" or col == "credit card number" or col == "phone number" or col == "address" or col == "zip code" or col == "PUMA_FULL" or col == "DOB-Day" or col == "DOB-Month" or col == "DOB-Year":
             if type(sample[col]) == np.float64:
                 identifier_sample = int(sample[col])
@@ -82,6 +83,8 @@ def get_pums_profile(sample, cols):
                 dataentry[PUMS_ATT_CODE_TO_NAME[col]] = str(identifier_sample)
             elif col not in PARTIAL_CREDIT_LIST and col != "identifiers":
                 dataentry[PUMS_ATT_CODE_TO_NAME[col]] = identifier_sample
+        
+        # All other identifiers need to be recovered using a mapping
         else:
             with open(f"./data/maps/{col}_map.pickle", "rb") as f:
                 map = pickle.load(f)
@@ -143,7 +146,7 @@ def deserialize_entry(dataentry, cols) -> dict:
         output[col] = dataentry[col]
     return output
 
-
+# Read dataset from csv file
 def get_dataset(dataset_link: str) -> pd.DataFrame:
     df = pd.read_csv(dataset_link, na_values=" ?")
     return df
@@ -157,25 +160,18 @@ def get_data_entry(
     columns: list,
 ) -> list:
     # Load into pandas
-
     if dataset is None:
         df = pd.read_csv(
             dataset_link,
-            # header=None,
-            # names=columns,
-            na_values=" ?",
-            # skipinitialspace=True,
+            na_values=" ?"
         )
     else:
         df = dataset
 
-    # df = pd.read_csv(dataset_link, skipinitialspace=True)
-    # print(f"{columns=}")
-
     df = df[columns]
+
     # Drop rows with missing values for simplicity
     df = df[columns].dropna()
-
     df = df.convert_dtypes(convert_integer=True)
     df["credit card number"] = df["credit card number"].astype(int).astype(str)
 
@@ -186,7 +182,6 @@ def get_data_entry(
     print(f"{no_of_entries=}, {len(df)=}")
 
     for i in range(no_of_entries):
-        # random_entry = None
         random_entry = df.iloc[i]
         random_entry, groundtruth = get_pums_profile(random_entry, columns)
         selected_people.append((random_entry, groundtruth))
@@ -200,8 +195,6 @@ def get_feature_codes(dataset: str):
 
 def get_target_attributes_from_dataentry(dataentry, features, dataset):
     filteredentry = dict()
-    # print(f"Features: {features}")
-    # print()
     for feature in features:
         try:
             if feature == "address":
@@ -218,7 +211,6 @@ def get_target_attributes_from_dataentry(dataentry, features, dataset):
                     filteredentry[key] = dataentry[key]
                 else:
                     pass
-                    # print(f"Feature {feature} not found in dataentry {dataentry}.")
         except TypeError as e:
             print(f"Error: {e} for feature: {feature}")
             print(key)

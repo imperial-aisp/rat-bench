@@ -9,6 +9,7 @@ import time
 
 from synthetic_data_generation.utils import write_output_async
 
+# Anonymization main function
 def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path:str, scenario:str, level:int,
                       gemini_version:str|None=None, llama_version:str|None=None, gpt_version:str|None=None,
                       epsilon:int|None=None, temperature:int|None=None, attribute_list_iterative:str|None=None,
@@ -80,6 +81,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
 
     for i, anonymizer in enumerate(anon_methods):
         print(f"Anonymizing with {anon_methods[i]}")
+
         if anon_methods[i] == "llama":
             anonymizer = anonymizers[-1]
             for profile in tqdm(profiles):

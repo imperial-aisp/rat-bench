@@ -46,7 +46,7 @@ pums_cols = [
 ]
 
 PUMS_DF = pd.read_csv("data/pums/pums_pwgtp_sample_.csv")
-N = 309349689 # 306169200
+N = 309349689 
 print("data loaded")
 
 def process_col(c, guess_correctness, ground_truth, cols_to_fit):
@@ -195,7 +195,6 @@ def fit_model_and_compute(cols_to_fit: List[str], record_to_analyze: List[int], 
         correctness_list.append(correctness)
         uniqueness_list.append(iu)
 
-        # print(f"iteration {i}, correctness = {correctness}, iu = {iu}")
     
     correctness = np.mean([c for c in correctness_list if not np.isnan(c)])
     iu = np.mean([u for u in uniqueness_list if not np.isnan(u)])
@@ -232,6 +231,7 @@ def compute_reid_risk(profiles, methods, attacker, results_path):
 
             for c in crctnss.keys():
                 if c in pums_cols:
+                    # Indirect identifiers
                     val, cols_to_fit = process_col(
                         c, crctnss, profile["indirect_identifiers"], cols_to_fit
                     )
@@ -242,7 +242,7 @@ def compute_reid_risk(profiles, methods, attacker, results_path):
                             record_to_analyze[c] = int(val)
 
                 else:
-                    # DIRECT IDENTIFIERS
+                    # Direct identifiers
                     c_guess = crctnss[c]
                     if c_guess is not None and len(c_guess) > 0:
                         if crctnss[c][0] == 1:
@@ -277,16 +277,6 @@ def compute_reid_risk(profiles, methods, attacker, results_path):
                     model = trained_models["/".join(cols_for_model)]
 
                     correctness, iu = compute_correctness(model, record, n)
-                    # correctness = correctmatch.individual_correctness(
-                    #     model, 
-                    #     np.array(record),
-                    #     n=n
-                    # )
-                    # iu = correctmatch.individual_uniqueness(
-                    #     model,
-                    #     np.array(record),
-                    #     n=n
-                    # )
                 else:
                     correctness, iu, fitted_model = fit_model_and_compute(
                         cols_for_model, record, df, n

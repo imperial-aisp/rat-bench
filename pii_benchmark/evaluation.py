@@ -182,7 +182,6 @@ def check_dob(guess: str, gt: str, att: str)-> tuple:
     else:
         is_correct = None
 
-    # print(att, guess, gt, is_correct)
     return is_correct
 
 
@@ -256,17 +255,6 @@ def check_correctness(
 
     return is_correct
 
-########### REMOVE FOR RE-RUN ###########
-# TEMP_DIRECT_ID_MAP = {
-#     "CREDIT CARD NUMBER": "credit card number",
-#     "NAME": "name",
-#     "SSN": "SSN",
-#     "PERSONAL EMAIL ADDRESS": "email",
-#     "RESIDENTIAL ADDRESS": "address",
-#     "PHONE NUMBER": "phone number"
-# }
-#########################################
-
 def check_guess_correctness(profiles: List, methods: List, llm_as_a_judge: bool = False, checker=None, attacker_name=""):
     results = []
 
@@ -275,7 +263,6 @@ def check_guess_correctness(profiles: List, methods: List, llm_as_a_judge: bool 
         suff = f"_{attacker_name}"
 
     if llm_as_a_judge:
-        # not implemented yet: always returns None
         print("Using llm-as-a-judge evaluator")
         checker = transformers.pipeline(
             "text-generation",
@@ -295,16 +282,8 @@ def check_guess_correctness(profiles: List, methods: List, llm_as_a_judge: bool 
         for id in profile["direct_identifiers"].keys():
             full_ground_truth[id] = profile["direct_identifiers"][id]
 
-        ######### CLEANED UP FOR RERUN (profile keys are inconsistent atm) #########
-        if "ground_truth" in profile:
-            k = "ground_truth"
-        elif "indirect_identifiers" in profile:
-            k = "indirect_identifiers"
-        else:
-            raise Exception("Neither ground_truth not indirect_identifiers are present in profile")
-        
-        for id in profile[k].keys():
-            full_ground_truth[id] = profile[k][id]
+        for id in profile["indirect_identifiers"].keys():
+            full_ground_truth[id] = profile["indirect_identifiers"][id]
 
         for m in methods:
             correctness, correctness_llm = check_guesses_one_profile(
@@ -332,18 +311,6 @@ def check_guesses_one_profile(
             gt = str(ground_truth[att])
         else:
             continue
-
-        ################# REMOVE FOR RE-RUN #################
-        # guesses_ = dict()
-
-        # for k in guesses.keys():
-        #     if k in str_to_pums_col_dict:
-        #         guesses_[str_to_pums_col_dict[k]] = guesses[k]
-        #     else:
-        #         guesses_[k] = guesses[k]
-
-        # guesses = guesses_
-        # #####################################################
 
         if att in guesses or ((att == "DOB-Day"
             or att == "DOB-Month"
