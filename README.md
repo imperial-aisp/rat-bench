@@ -5,7 +5,7 @@
 
 Benchmark for evaluating PII removal and text anonymization tools for the paper [RAT-Bench](), with a focus on **re-identification risk**. 
 
-Our [benchmark dataset](https://huggingface.co/datasets/imperial-cpg/text_anonymization_benchmark) is openly accessible. We also maintain an [extendable leaderboard](https://huggingface.co/spaces/imperial-cpg/rat-bench) of text anonymization tools.
+Our [benchmark dataset](https://huggingface.co/datasets/imperial-cpg/rat-bench) is openly accessible. We also maintain an [extendable leaderboard](https://huggingface.co/spaces/imperial-cpg/rat-bench) of text anonymization tools.
 
 # ⚙️ Installation
 
