@@ -1,5 +1,7 @@
 # RAT-Bench :rat:
-
+<p align="center">
+<img src="Rat_Bench.png" width="500" align="center">
+</p>
 Benchmark for evaluating PII removal and text anonymization tools, with a focus on **re-identification risk**.
 
 # ⚙️ Installation
