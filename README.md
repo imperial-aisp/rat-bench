@@ -14,7 +14,7 @@ Run the following inside the project root:
 uv sync
 ```
 
-This will create a virtual environment inside the `.venv` folder. Run all next commands within this virtual environment.
+This will create a virtual environment inside a `.venv` folder. Run all next commands within this virtual environment.
 
 Make sure to then activate the environment, by running `source .venv/bin/activate`.
 
