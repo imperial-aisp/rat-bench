@@ -1,4 +1,4 @@
-# RAT-Bench :rat:
+# RAT-Bench 
 <p align="center">
 <img src="Rat_Bench.png" width="500" align="center">
 </p>
