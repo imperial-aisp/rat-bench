@@ -3,7 +3,7 @@
 <img src="Rat_Bench.png" width="350" align="center">
 </p>
 
-Benchmark for evaluating PII removal and text anonymization tools for the paper [RAT-Bench](), with a focus on **re-identification risk**. 
+Benchmark for evaluating PII removal and text anonymization tools for the paper [RAT-Bench](https://arxiv.org/pdf/2602.12806v1), with a focus on **re-identification risk**. 
 
 Our [benchmark dataset](https://huggingface.co/datasets/imperial-cpg/rat-bench) is openly accessible. We also maintain an [extendable leaderboard](https://huggingface.co/spaces/imperial-cpg/rat-bench) of text anonymization tools.
 
