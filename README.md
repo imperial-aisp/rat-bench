@@ -66,3 +66,16 @@ A full run of the pipeline for one difficulty level, from generation to re-ident
 1. `sh scripts/generate/level_1.sh`
 2. `sh scripts/anonymize/level_1.sh`
 3. `sh scripts/attack/level_1.sh`
+
+# References
+
+If you found our work useful for your research, kindly cite our paper: 
+
+```
+@article{krvco2026rat,
+  title={RAT-Bench: A Comprehensive Benchmark for Text Anonymization},
+  author={Kr{\v{c}}o, Nata{\v{s}}a and Yao, Zexi and Meeus, Matthieu and de Montjoye, Yves-Alexandre},
+  journal={arXiv preprint arXiv:2602.12806},
+  year={2026}
+}
+```
