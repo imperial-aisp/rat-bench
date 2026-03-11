@@ -15,32 +15,27 @@ class LlamaRescriberAnonymizer(Anonymizer):
         self.model = pipeline("text-generation", model=f"meta-llama/Llama-{model_version}")
         self.scenario = scenario
 
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str = None) -> str:
         redacted_text = text
         entities = []
 
+        if scenario is None:
+            scenario = self.scenario
+
         prompt = get_anonymization_prompt(
-            method="rescriber", text=text, instruct_template=True
+            method="rescriber", text=text, instruct_template=True, scenario=scenario
         )
 
         chat = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": text},
         ]
-        print("RESCRIBER PROMPT")
-        print(prompt)
-        print("TEXT")
-        print(text)
 
         response = self.model(chat, max_new_tokens=4096)
         for r in response[0]["generated_text"]:
             if r["role"] == "assistant":
                 response = r["content"]
-        print("RESPONSE")
-        print(response)
         entities = self.parse_results(response)
-        print("ENTITIES")
-        print(entities)
 
         for e in entities:
             entity_text = e["text"]

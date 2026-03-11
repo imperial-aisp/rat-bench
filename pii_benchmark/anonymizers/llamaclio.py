@@ -14,9 +14,11 @@ class LlamaClioAnonymizer(Anonymizer):
         self.scenario = scenario
 
     def anonymize(
-            self, text:str
+            self, text:str, scenario: str = None
     ):
-        prompt1, prompt2 = get_anonymization_prompt(method="clio", text=text, scenario=self.scenario)
+        if scenario is None:
+            scenario = self.scenario
+        prompt1, prompt2 = get_anonymization_prompt(method="clio", text=text, scenario=scenario)
         prompt1 = prompt1 + "\n{text}</conversation>"
 
         chat = [

@@ -91,6 +91,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     profile["text"],
                     prompt_type="anthropic_attributes",
                     attributes=llama_attributes["llama"],
+                    scenario=profile["scenario"]
                 )
                 if timing_flag:
                     end_time = time.perf_counter()
@@ -107,6 +108,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     profile["text"],
                     prompt_type="anthropic_attributes",
                     attributes=llama_attributes["llama_full"],
+                    scenario=profile["scenario"]
                 )
                 if timing_flag:
                     end_time = time.perf_counter()
@@ -120,7 +122,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                 if timing_flag:
                     start_time = time.perf_counter()
                 anon_text = anonymizers[llama_idx].anonymize(
-                    profile["text"], prompt_type="anthropic"
+                    profile["text"], prompt_type="anthropic", scenario=profile["scenario"]
                 )
                 if timing_flag:
                     end_time = time.perf_counter()
@@ -134,7 +136,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                 if timing_flag:
                     start_time = time.perf_counter()
                 anon_text = anonymizers[llama_idx].anonymize(
-                    profile["text"], prompt_type="rescriber"
+                    profile["text"], prompt_type="rescriber", scenario=profile["scenario"]
                 )
                 if timing_flag:
                     end_time = time.perf_counter()
@@ -148,7 +150,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                 if timing_flag:
                     start_time = time.perf_counter()
                 anon_text = anonymizers[llama_idx].anonymize(
-                    profile["text"], prompt_type="clio"
+                    profile["text"], prompt_type="clio", scenario=profile["scenario"]
                 )
                 if timing_flag:
                     end_time = time.perf_counter()
@@ -174,7 +176,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
             for profile in tqdm(profiles):
                 if timing_flag:
                     start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile)
+                anon_text = anonymizer.anonymize(profile, scenario=profile["scenario"])
                 if timing_flag:
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}"] = end_time - start_time
@@ -187,7 +189,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
             for profile in tqdm(profiles):
                 if timing_flag:
                     start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile["text"])
+                anon_text = anonymizer.anonymize(profile["text"], scenario=profile["scenario"])
                 if timing_flag:
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}_eps{EPSILON}"] = end_time - start_time
@@ -200,7 +202,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
             for profile in tqdm(profiles):
                 if timing_flag:
                     start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile["text"])
+                anon_text = anonymizer.anonymize(profile["text"], scenario=profile["scenario"])
                 if timing_flag:
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}_temp{TEMPERATURE}"] = end_time - start_time
@@ -212,7 +214,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
             for profile in tqdm(profiles):
                 if timing_flag:
                     start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile["text"])
+                anon_text = anonymizer.anonymize(profile["text"], scenario=profile["scenario"])
                 if timing_flag:
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}"] = end_time - start_time

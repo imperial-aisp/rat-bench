@@ -30,11 +30,14 @@ class GeminiAnonymizer(Anonymizer):
         self.model_version = model_version
         self.attributes = attributes
 
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str = None) -> str:
         client = genai.Client(api_key=gemini_api_key)
 
+        if scenario is None:
+            scenario = self.scenario
+            
         prompt = get_anonymization_prompt(
-            self.prompt_type, text, self.attributes
+            self.prompt_type, text, self.attributes, scenario
         )
 
         for attempt in range(1, MAX_RETRIES + 1):

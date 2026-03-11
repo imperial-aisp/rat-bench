@@ -16,7 +16,7 @@ class GPTAnonymizer(Anonymizer):
         self.client = OpenAI(api_key=openai_api_key)
 
     def anonymize(
-        self, text: str, prompt_type: str = None, attributes: List[str] = None
+        self, text: str, prompt_type: str = None, attributes: List[str] = None, scenario: str = "medical"
     ) -> str:
         if prompt_type == None:
             pt = self.prompt_type
@@ -26,9 +26,11 @@ class GPTAnonymizer(Anonymizer):
             atts = self.attributes
         else:
             atts = attributes
-            
+        
+        if scenario is None:
+            scenario = self.scenario
         prompt = get_anonymization_prompt(
-            pt, text, atts, instruct_template=False
+            pt, text, atts, instruct_template=False, scenario=scenario
         )
         
         if pt=="clio":

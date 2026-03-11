@@ -30,6 +30,7 @@ ANTHROPIC_SYSTEM_PROMPT_ALL_ATTRIBUTES = "You are an expert redactor. The user i
 
 CLIO_PROMPT_MEDICAL = "The following is a conversation between a patient and a doctor, at a medical consultation:\n <conversation>"
 CLIO_PROMPT_CHATBOT = "The following is a conversation between a user and an AI chatbot:\n <conversation>"
+CLIO_PROMPT_MEETING = "The following is a meeting transcript:\n <conversation>"
 
 def get_anonymization_prompt(
     method: str,
@@ -50,19 +51,26 @@ def get_anonymization_prompt(
             "r",
         ) as f:
             prompt2 = f.read()
-        if scenario=="medical":
+        if scenario=="medical" or scenario=="Medical consultation":
             return CLIO_PROMPT_MEDICAL, prompt2
-        elif scenario=="chatbot":
+        elif scenario=="chatbot" or scenario=="Chatbot conversation":
             return CLIO_PROMPT_CHATBOT, prompt2
+        elif scenario=="meeting" or scenario=="Meeting transcript":
+            return CLIO_PROMPT_MEETING, prompt2
     elif method == "rescriber":
-        if scenario=="medical":
+        if scenario=="medical" or scenario=="Medical consultation":
             with open(
                 "pii_benchmark/anonymizers/anon_prompts/rescriber_medical.txt", "r"
             ) as f:
                 prompt = f.read()
-        elif scenario=="chatbot":
+        elif scenario=="chatbot" or scenario=="Chatbot conversation":
             with open(
                 "pii_benchmark/anonymizers/anon_prompts/rescriber_chatbot.txt", "r"
+            ) as f:
+                prompt = f.read()
+        elif scenario=="meeting" or scenario=="Meeting transcript":
+            with open(
+                "pii_benchmark/anonymizers/anon_prompts/rescriber_meeting.txt", "r"
             ) as f:
                 prompt = f.read()
         return prompt
