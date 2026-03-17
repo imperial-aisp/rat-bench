@@ -26,34 +26,38 @@ def write_output_async(output_file, output_profiles):
     print("Writing to output file:", output_file)
     # Keep trying until write success
     while (not write_flag):
-        f = open(output_file, "w+")
+        f = open(output_file, "r")
         try:
             # Get the write lock
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             profiles = list()
-
             # Read the existing profiles
             for line in f:
                 profiles.append(json.loads(line))
+            f.close()
             if (len(profiles) != 0 and len(profiles) == len(output_profiles)):
                 for i in range(len(profiles)):
                     # Merge each profile, then write it the the output file.
                     for key in output_profiles[i]:
                         profiles[i][key] = output_profiles[i][key]
+                    f = open(output_file, "w+")
                     print(json.dumps(profiles[i]), file=f)
+                    f.close()
             else:
                 # File could not be merged
                 if len(profiles) != 0:
                     print("Warning! Overwriting file with different profile count!")
                 for entry in output_profiles:
+                    f = open(output_file, "w+")
                     print(json.dumps(entry), file=f)
+                    f.close()
             write_flag = True
             
             # Release the write lock!
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
         except:
-            pass
-        f.close()
+            f.close()
+        
 
         # If busy, wait for a bit, then try again
         if (not write_flag):
