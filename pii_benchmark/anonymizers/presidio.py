@@ -47,7 +47,7 @@ class PresidioAnonymizer(Anonymizer):
         self.analyzer.registry.add_recognizer(titles_recognizer)
         self.analyzer.registry.add_recognizer(sex_recognizer)
 
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, *args, **kwargs) -> str:
         # Analyze
         analyzer_results = self.analyzer.analyze(
                 text=text, language=self.language, entities=[
