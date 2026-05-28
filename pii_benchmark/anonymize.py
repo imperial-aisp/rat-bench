@@ -7,7 +7,7 @@ from pii_benchmark.anonymizers.get_anonymizers import get_anonymizer
 import argparse
 import time
 
-from synthetic_data_generation.utils import write_output_async
+from synthetic_data_generation.utils import write_output
 
 # Anonymization main function
 def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path:str, scenario:str, level:int,
@@ -97,7 +97,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_llama"] = end_time - start_time
                 profile[f"text_anon_llama"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
         
         elif anon_methods[i] == "llama_full":
             anonymizer = anonymizers[-1]
@@ -114,7 +114,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_llama_full"] = end_time - start_time
                 profile[f"text_anon_llama_full"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
         
         elif anon_methods[i] == "llama_basic":
             anonymizer = anonymizers[-1]
@@ -128,7 +128,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_llama_basic"] = end_time - start_time
                 profile[f"text_anon_llama_basic"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
 
         elif anon_methods[i]=="llama_rescriber":
             anonymizer = anonymizers[-1]
@@ -142,7 +142,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_llama_rescriber"] = end_time - start_time
                 profile[f"text_anon_llama_rescriber"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
 
         elif anon_methods[i]=="llama_clio":
             anonymizer = anonymizers[-1]
@@ -156,7 +156,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_llama_clio"] = end_time - start_time
                 profile[f"text_anon_llama_clio"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
 
         elif anon_methods[i] == "iterative":
             anonymizer = anonymizers[i]
@@ -169,7 +169,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}_{attribute_list_iterative}"] = end_time - start_time
                 profile[f"text_anon_{anon_methods[i]}_{attribute_list_iterative}"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
         
         elif anon_methods[i]=="llama_clio":
             anonymizer = anonymizers[i]
@@ -181,7 +181,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}"] = end_time - start_time
                 profile[f"text_anon_{anon_methods[i]}"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
 
         elif anon_methods[i]=="madlib" or anon_methods[i]=="tem":
             # make sure we write epsilon to the output
@@ -194,7 +194,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}_eps{EPSILON}"] = end_time - start_time
                 profile[f"text_anon_{anon_methods[i]}_eps{EPSILON}"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
                 
         elif anon_methods[i]=="dp_prompt_gpt":
             # make sure we write temperature to the output
@@ -207,7 +207,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}_temp{TEMPERATURE}"] = end_time - start_time
                 profile[f"text_anon_{anon_methods[i]}_temp{TEMPERATURE}"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
         
         else:
             anonymizer = anonymizers[i]
@@ -219,9 +219,9 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                     end_time = time.perf_counter()
                     profile[f"runtime_{anon_methods[i]}"] = end_time - start_time
                 profile[f"text_anon_{anon_methods[i]}"] = anon_text
-            write_output_async(output_file, profiles)
+            write_output(output_file, profiles)
 
-    write_output_async(output_file, profiles)
+    write_output(output_file, profiles)
 
 
 if __name__ == "__main__":
