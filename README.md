@@ -33,7 +33,7 @@ You'll need to install the `spacy` transformers by running
 
 ```
 uv pip install pip
-python -m spacy download en_core_web_lg
+python -m spacy download en_core_web_sm
 ```
 
 If you would need anonymizers also for other languages, repeat the same process to download `es_core_news_lg`(Spanish) and `zh_core_web_lg`(Chinese).
