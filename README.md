@@ -51,7 +51,7 @@ To run our pipeline for the Textwash anonymizer, download their models from [her
 We have included the processed datasets needed to generate the benchmark and run our experiments in this repo:
 
 `data/100_profiles.csv` contains the profiles, including direct and indirect identifiers, used to generate benchmark entries.
-`data/population_sample.csv` contains the 3M sample of [US census data](https://www.census.gov/programs-surveys/acs/microdata/access/2010.html), preprocessed to account for weighting of each row.
+`data/population_sample.csv` contains a 100-row example of [US census data](https://www.census.gov/programs-surveys/acs/microdata/access/2010.html) which is used to compute re-identification rate. The full dataset needed for computation, preprocessed to account for weighting of each row, can be found [here](https://drive.google.com/drive/folders/1k4ZP1E4r4YCQ9ihuelOi_D-C6onBF_jp). **Please download this dataset and place it in ``data/pums/pums_pwgtp_sample_.csv`` in order to get accurate risk scores.**
 
 # 🚀 Adding and Evaluating a New Anonymizer
 
