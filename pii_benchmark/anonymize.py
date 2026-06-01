@@ -8,7 +8,7 @@ import argparse
 import time
 
 from pii_benchmark.utility import utility_scores
-from synthetic_data_generation.utils import write_output_async
+from synthetic_data_generation.utils import write_output
 
 
 def _run_anonymizer_loop(anonymizer, profiles, output_key, output_file, timing_flag, utility_flag, call_fn):
@@ -24,7 +24,7 @@ def _run_anonymizer_loop(anonymizer, profiles, output_key, output_file, timing_f
             profile[f"rouge_score_{output_key}"] = scores[0]
             profile[f"bleu_score_{output_key}"] = scores[1]
 
-    write_output_async(output_file, profiles)
+    write_output(output_file, profiles)
 
 
 # Anonymization main function
@@ -145,12 +145,18 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
                 lambda a, p: a.anonymize(p["text"], scenario=p["scenario"])
             )
         else:
-            _run_anonymizer_loop(
-                anonymizers[i], profiles, method, output_file, timing_flag, utility_flag,
-                lambda a, p: a.anonymize(p["text"], scenario=p["scenario"])
-            )
+            anonymizer = anonymizers[i]
+            for profile in tqdm(profiles):
+                if timing_flag:
+                    start_time = time.perf_counter()
+                anon_text = anonymizer.anonymize(profile["text"], scenario=profile["scenario"])
+                if timing_flag:
+                    end_time = time.perf_counter()
+                    profile[f"runtime_{anon_methods[i]}"] = end_time - start_time
+                profile[f"text_anon_{anon_methods[i]}"] = anon_text
+            write_output(output_file, profiles)
 
-    write_output_async(output_file, profiles)
+    write_output(output_file, profiles)
 
 
 if __name__ == "__main__":
