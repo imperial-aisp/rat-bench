@@ -6,5 +6,5 @@ class Anonymizer(ABC):
         pass
 
     @abstractmethod
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str="medical") -> str:
         pass

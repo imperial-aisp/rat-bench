@@ -14,12 +14,12 @@ class LlamaClioAnonymizer(Anonymizer):
         self.scenario = scenario
 
     def anonymize(
-            self, text:str, scenario: str = None
+            self, text:str, scenario: str = ""
     ):
-        if scenario is None:
+        if scenario == "":
             scenario = self.scenario
-        prompt1, prompt2 = get_anonymization_prompt(method="clio", text=text, scenario=scenario)
-        prompt1 = prompt1 + "\n{text}</conversation>"
+        prompt1 = get_anonymization_prompt(method="clio", text=text, scenario=scenario)
+        prompt1 = prompt1
 
         chat = [
             {"role": "system", "content": prompt1},
@@ -29,20 +29,20 @@ class LlamaClioAnonymizer(Anonymizer):
         response1 = ""
         for r in response[0]["generated_text"]:
             if r["role"] == "assistant":
-                response1 = r["content"]
-
-        chat.append({
-                    "role": "assistant", "content": response1
-                    }
-        )
-        chat.append({
-            "role": "user", "content": prompt2
-        })
-
-        response = self.model(chat, max_new_tokens=4096)
-        anon_text = ""
-        for r in response[0]["generated_text"]:
-            if r["role"] == "assistant":
                 anon_text = r["content"]
+
+        # chat.append({
+        #             "role": "assistant", "content": response1
+        #             }
+        # )
+        # chat.append({
+        #     "role": "user", "content": prompt2
+        # })
+
+        # response = self.model(chat, max_new_tokens=4096)
+        # anon_text = ""
+        # for r in response[0]["generated_text"]:
+        #     if r["role"] == "assistant":
+        #         anon_text = r["content"]
     
         return anon_text

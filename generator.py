@@ -102,15 +102,37 @@ TARGET_LANGUAGE = args.target_language
 
 print(f"sample_identifiers = {SAMPLE_IDENTIFIERS}")
 
-ALL_DIRECT_IDENTIFIERS = (
-    "name, email, phone number, address, SSN, credit card number"
-)
-ALL_DIRECT_IDENTIFIERS = [a.strip() for a in ALL_DIRECT_IDENTIFIERS.split(",")]
+ALL_DIRECT_IDENTIFIERS = ["name", "email", "phone number", "address", "SSN", "credit card number"]
+ALL_DIRECT_IDENTIFIERS_MEX = ["name", "email", "phone number", "address", "CURP", "credit card number"]
+ALL_DIRECT_IDENTIFIERS_SRB = ["name", "email", "phone number", "address", "JMBG", "credit card number"]
+ALL_DIRECT_IDENTIFIERS_NL  = ["name", "email", "phone number", "address", "RRN", "credit card number"]
 
-ALL_INDIRECT_IDENTIFIERS = (
-    "RAC2P, CIT, ST, OCCP, MAR, SEX, ESR, SCHL, DOB"
-)
-ALL_INDIRECT_IDENTIFIERS = [a.strip() for a in ALL_INDIRECT_IDENTIFIERS.split(",")]
+ALL_INDIRECT_IDENTIFIERS = ["RAC2P", "CIT", "ST", "OCCP", "MAR", "SEX", "ESR", "SCHL", "DOB"]
+ALL_INDIRECT_IDENTIFIERS_MEX = [
+    "CLASE_VIV", "SEXO", "EDAD", "ENT_PAIS_NAC", "DHSERSAL1", "RELIGION",
+    "HLENGUA", "HESPANOL", "ASISTEN", "NIVACAD", "SITUA_CONYUGAL", "HIJOS_NAC_VIVOS"
+]
+ALL_INDIRECT_IDENTIFIERS_SRB = [
+    "urban", "age", "marital_status", "given_birth", "dob", "dom",
+    "age_mar", "partner_age", "ethnicity", "language"
+]
+ALL_INDIRECT_IDENTIFIERS_NL = [
+    "age", "sex", "marstd", "nativity", "bplcountry", "nation",
+    "educnl", "empstatd", "labforce", "occisco", "indgen",
+]
+
+if SEED_DATASET == "MEX":
+    _ACTIVE_DIRECT   = ALL_DIRECT_IDENTIFIERS_MEX
+    _ACTIVE_INDIRECT = ALL_INDIRECT_IDENTIFIERS_MEX
+elif SEED_DATASET == "SRB":
+    _ACTIVE_DIRECT   = ALL_DIRECT_IDENTIFIERS_SRB
+    _ACTIVE_INDIRECT = ALL_INDIRECT_IDENTIFIERS_SRB
+elif SEED_DATASET == "NL":
+    _ACTIVE_DIRECT   = ALL_DIRECT_IDENTIFIERS_NL
+    _ACTIVE_INDIRECT = ALL_INDIRECT_IDENTIFIERS_NL
+else:
+    _ACTIVE_DIRECT   = ALL_DIRECT_IDENTIFIERS
+    _ACTIVE_INDIRECT = ALL_INDIRECT_IDENTIFIERS
 
 if SAMPLE_IDENTIFIERS==0:
     GENERATE_IDENTIFIERS_FLAG = False
@@ -136,7 +158,7 @@ else:
     API_KEY = ""
 
 
-def generate_email (seed_dataset, dataentry):
+def generate_email(seed_dataset, dataentry):
     prompt = create_direct_identifiers_prompt(
         seed_dataset,
         ["email"],
@@ -145,14 +167,15 @@ def generate_email (seed_dataset, dataentry):
     response = get_llm_response(prompt, API_KEY, LLM)
     print("Response for email generation:")
     print(response)
-    response = response.splitlines()
 
     outdataentry = dict()
-    # Add them to the data entry
-    for line in response:
-        line = line.split(": ")
-        outdataentry[line[0]] = line[1]
-    return outdataentry["email"]
+    for line in response.splitlines():
+        if ": " in line:
+            key, val = line.split(": ", 1)
+            outdataentry[key.strip()] = val.strip()
+
+    # Support English key ("email"), Spanish key ("correo electrónico"), Flemish ("e-mailadres")
+    return outdataentry.get("email") or outdataentry.get("correo electrónico") or outdataentry.get("e-mailadres") or ""
 
 # Generate one synthetic test record
 def process_record(local_args):
@@ -180,10 +203,17 @@ def process_record(local_args):
     if "email" in identifiers:
         email = generate_email(seed_dataset, dataentry)
         ground_truth["email"] = email
-        dataentry["email"] = email
+        if seed_dataset == "MEX":
+            email_key = "correo electrónico"
+        elif seed_dataset == "NL":
+            email_key = "e-mailadres"
+        else:
+            email_key = "email"
+        dataentry[email_key] = email
+
 
     # Create LLM Prompt
-    prompt, selected_scenario = create_generative_prompt(
+    prompt, selected_scenario, additional_info = create_generative_prompt(
         scenario,
         seed_dataset,
         # remove zip code from list of records to leak (passed to the generator)
@@ -208,15 +238,29 @@ def process_record(local_args):
     for feature in features:
         if feature in identifiers:
             output_dict["direct_identifiers"][feature] = ground_truth[feature]
-            if feature == "address":
+            if feature == "address" and seed_dataset not in ("MEX", "SRB", "NL"):
                 output_dict["indirect_identifiers"]["zip code"] = str(ground_truth["zip code"])
         else:
             output_dict["indirect_identifiers"][feature] = ground_truth[feature]
     output_dict["features"] = features
     output_dict["difficulty"] = difficulty
     output_dict["prompt"] = prompt
-    output_dict["text"] = response
     output_dict["scenario"] = selected_scenario
+    if selected_scenario == "Concert ticket purchase" or selected_scenario == "Tourist information chatbot" or selected_scenario == "Topic history":
+        output_dict["public_info"] = additional_info
+    
+    if selected_scenario == "Tourist information chatbot":
+        n_retries = 5
+
+        while additional_info["landmark"].lower().replace("the ", "") not in response.lower() and n_retries > 0:
+            print(f"LLM did not include the landmark in the response, retrying... {n_retries} retries left")
+            response = get_llm_response(prompt, API_KEY, LLM)
+            n_retries -= 1
+        if additional_info["landmark"].lower().replace("the ", "") not in response.lower() and n_retries == 0:
+            print("LLM did not include the landmark in the response after 5 retries, moving on...")
+        
+
+    output_dict["text"] = response
     return output_dict
 
 
@@ -230,9 +274,9 @@ def main():
     cols = FEATURES
     cols.append("identifiers")
     print(f"Columns used from dataset: {cols}")
-    # if "address" in FEATURES:
     df = get_dataset(SEED_DATASET_LINK)
-    df["zip code"] = df["zip code"].astype(str)
+    if SEED_DATASET not in ("MEX", "SRB", "NL"):
+        df["zip code"] = df["zip code"].astype(str)
 
     # Get data entries for seeding prompts
     data_records = get_data_entry(
@@ -240,6 +284,7 @@ def main():
         dataset=df,
         no_of_entries=NO_OF_ENTRIES,
         columns=cols,
+        data_source=SEED_DATASET,
     )
 
     # print(data_records)
@@ -248,27 +293,23 @@ def main():
     record_args = list()
     for i in range(len(data_records)):
         if SAMPLE_IDENTIFIERS > 0:
-            direct_identifiers = random.sample(
-                ALL_DIRECT_IDENTIFIERS, SAMPLE_IDENTIFIERS
-            )
-        elif SAMPLE_IDENTIFIERS==-1:
-            direct_identifiers = ALL_DIRECT_IDENTIFIERS
+            direct_identifiers = random.sample(_ACTIVE_DIRECT, SAMPLE_IDENTIFIERS)
+        elif SAMPLE_IDENTIFIERS == -1:
+            direct_identifiers = list(_ACTIVE_DIRECT)
         ## if SAMPLE_IDENTIFIERS==0 do not use any direct identifiers
         else:
             direct_identifiers = []
-        
+
         if SAMPLE_FEATURES == 5:
             # Get indirect identifiers directly from dataset
             indirect_identifiers = data_records[i][1].pop("identifiers")
-            indirect_identifiers = indirect_identifiers.split(",")
+            indirect_identifiers = [f for f in indirect_identifiers.split(",") if f != "ZIP_CODE"]
         else:
-            indirect_identifiers = random.sample(
-                ALL_INDIRECT_IDENTIFIERS, SAMPLE_FEATURES
-            )
+            indirect_identifiers = random.sample(_ACTIVE_INDIRECT, SAMPLE_FEATURES)
         print(f"Generating record {i} with direct identifiers: {direct_identifiers} and indirect identifiers: {indirect_identifiers}")
         
         features = indirect_identifiers + direct_identifiers
-        if "address" in direct_identifiers:
+        if "address" in direct_identifiers and SEED_DATASET not in ("MEX", "SRB", "NL"):
             print("address in direct identifiers, appending zip code to features")
             features.append("zip code")
             print(f"{features=}")

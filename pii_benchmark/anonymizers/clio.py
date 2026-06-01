@@ -3,7 +3,7 @@ import anthropic
 from pii_benchmark.anonymizers.anonymizer import Anonymizer
 from pii_benchmark.prompts import get_system_prompt
 
-from credentials import anthropic_api_key
+from pii_benchmark.credentials import anthropic_api_key
 
 
 class ClioAnonymizer(Anonymizer):
@@ -16,7 +16,7 @@ class ClioAnonymizer(Anonymizer):
         self.model_version = model_version
         self.attributes = attributes
 
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str = "") -> str:
         base_prompt = get_system_prompt(self.base_prompt)
 
         client = anthropic.Anthropic(api_key=anthropic_api_key)
@@ -30,4 +30,4 @@ class ClioAnonymizer(Anonymizer):
             ],
         )
 
-        return message.content
+        return message.content[0].text

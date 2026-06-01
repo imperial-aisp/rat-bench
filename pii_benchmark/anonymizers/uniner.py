@@ -34,7 +34,7 @@ class UninerAnonymizer(Anonymizer):
             ]
         }
 
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str = "") -> str:
         redacted_text = text
         entities = []
 

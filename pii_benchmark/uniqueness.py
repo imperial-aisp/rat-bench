@@ -8,11 +8,97 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 
-PUMS_MAPS_PATH = "./data/pums/maps/{col}_map.pickle"
-PUMS_DOB_MAP_PATH = "./data/pums/maps/{col}_map.pickle"
+PUMS_MAPS_PATH = "./data/maps/{col}_map.pickle"
+PUMS_DOB_MAP_PATH = "./data/maps/{col}_map.pickle"
+
+MEX_MAPS_PATH = "./data/es/maps/{col}_map.json"
+# Columns whose ground-truth value is already a raw integer (not a categorical label)
+MEX_NUMERIC_COLS = {"EDAD", "HIJOS_NAC_VIVOS"}
+
+mex_cols = [
+    "CLASE_VIV", "SEXO", "EDAD", "ENT_PAIS_NAC", "DHSERSAL1", "RELIGION",
+    "HLENGUA", "HESPANOL", "ASISTEN", "NIVACAD", "SITUA_CONYUGAL", "HIJOS_NAC_VIVOS",
+]
+
+MEX_N = 126_014_024  # Mexico 2020 census population
+
+# ---- Serbian (MICS) dataset ----
+SRB_N = 6_900_000  # Serbia population
+
+srb_cols = [
+    "urban", "age", "marital_status", "given_birth", "ethnicity",
+    "language", "dob", "dom", "age_mar", "partner_age",
+]
+
+# Columns whose ground-truth is a raw integer (actual value, not a map code)
+SRB_NUMERIC_COLS = {"age", "age_mar", "partner_age"}
+
+# Maps column name -> map filename (without .json) for categorical SRB columns
+SRB_COL_TO_MAPFILE = {
+    "urban":          "urban_status_map",
+    "marital_status": "marital_status_map",
+    "given_birth":    "ever_given_birth_map",
+    "dob":            "dob_map",
+    "dom":            "dom_map",
+    "ethnicity":      "ethnicity_map",
+    "language":       "language_map",
+}
+
+# Load Serbian encoded dataset and build per-column 1-indexed encoders for CorrectMatch.
+# sample_enc.csv has raw codes; some columns (age, age_mar, partner_age) hold actual values
+# that can exceed the number of unique values K, which CorrectMatch requires to be in {1..K}.
+SRB_DF_RAW = pd.read_csv("data/srb/data/sample_enc.csv")
+SRB_DF_RAW["age_mar"] = pd.to_numeric(SRB_DF_RAW["age_mar"], errors="coerce")
+
+SRB_ENCODERS: dict = {}
+_srb_encoded_cols = {}
+for _col in srb_cols:
+    _vals = sorted(int(v) for v in SRB_DF_RAW[_col].dropna().unique().tolist())
+    _enc = {v: idx + 1 for idx, v in enumerate(_vals)}
+    SRB_ENCODERS[_col] = _enc
+    _srb_encoded_cols[_col] = SRB_DF_RAW[_col].apply(
+        lambda x, e=_enc: e[int(x)] if pd.notna(x) else np.nan
+    )
+
+SRB_DF_ENCODED = pd.DataFrame(_srb_encoded_cols)
+
+SRB_DF_ENCODED["language"] = SRB_DF_ENCODED["language"].fillna(6).astype(int)
+SRB_DF_ENCODED["dom"] = SRB_DF_ENCODED["dom"].fillna(2016).astype(int)
+SRB_DF_ENCODED["age_mar"] = SRB_DF_ENCODED["age_mar"].fillna(35).astype(int)
+SRB_DF_ENCODED["partner_age"] = SRB_DF_ENCODED["partner_age"].fillna(48).astype(int)
+
+# ---- NL (Belgian/Flemish IPUMS) dataset ----
+NL_N = 16_655_799  # Netherlands 2011 census population
+
+nl_cols = [
+    "age", "sex", "marstd", "nativity", "bplcountry", "nation",
+    "educnl", "empstatd", "labforce", "occisco", "indgen", "dob",
+    # "dob-Month", "dob-Year", "dob-Day",
+]
+
+# Maps column name -> map file stem (without _map.json)
+NL_COL_TO_MAPFILE_UNIQUENESS = {
+    "age":        "age",
+    "sex":        "sex",
+    "marstd":     "marital_status",
+    "nativity":   "nativity",
+    "bplcountry": "country",
+    "nation":     "nation",
+    "educnl":     "education",
+    "empstatd":   "employment_status",
+    "labforce":   "labor_force",
+    "occisco":    "occupation",
+    "indgen":     "industry",
+    "dob":        "dob",
+}
+
+# sample_enc.csv encodes all values as {1,...,K} -- no re-encoding needed.
+NL_DF = pd.read_csv("data/nl/data/sample_enc.csv", usecols=nl_cols)
+NL_DF = NL_DF.dropna().astype(int)
+
 
 ### special maps for occupation (type and description) ###
-with open("data/pums/maps/OCCP_type_map.pickle", "rb") as f:
+with open("data/maps/OCCP_type_map.pickle", "rb") as f:
     PUMS_OCCUPATION_TYPES = pickle.load(f)
 
 PUMS_OCCUPATION_TYPE_TO_CODE = dict()
@@ -45,7 +131,7 @@ pums_cols = [
     "zip code"
 ]
 
-PUMS_DF = pd.read_csv("data/pums/pums_pwgtp_sample_.csv")
+PUMS_DF = pd.read_csv("/data/natasa/pii_benchmark/data/pums/pums_pwgtp_sample_.csv")
 N = 309349689 
 print("data loaded")
 
@@ -69,9 +155,9 @@ def process_col(c, guess_correctness, ground_truth, cols_to_fit):
             with open(PUMS_DOB_MAP_PATH.format(col=c), "rb") as f:
                 map = pickle.load(f)
         elif c == "zip code":
-            with open("data/pums/maps/zip_to_puma.pickle", "rb") as f:
+            with open("data/maps/zip_to_puma.pickle", "rb") as f:
                 zip_to_puma_map = pickle.load(f)
-            with open("data/pums/maps/PUMA_FULL_map.pickle", "rb") as f:
+            with open("data/maps/PUMA_FULL_map.pickle", "rb") as f:
                 puma_map = pickle.load(f)
             inverse_map = {v:k for k,v in puma_map.items()}
             zip_code = ground_truth["zip code"]
@@ -140,6 +226,115 @@ def process_col(c, guess_correctness, ground_truth, cols_to_fit):
     else:
         return None, cols_to_fit
 
+
+def process_col_mex(c, guess_correctness, ground_truth, cols_to_fit):
+    """MEX equivalent of process_col: maps a correctly-guessed census attribute to its encoded integer."""
+    if c not in guess_correctness:
+        print("no field for column ", c)
+        return None, cols_to_fit
+
+    if guess_correctness[c] is None or len(guess_correctness[c]) == 0:
+        print("none guess for column ", c)
+        return None, cols_to_fit
+
+    if guess_correctness[c][0] == 1 and c in mex_cols:
+        cols_to_fit.append(c)
+
+        if c in MEX_NUMERIC_COLS:
+            try:
+                val = int(float(ground_truth[c]))
+            except (ValueError, TypeError):
+                return None, cols_to_fit
+        else:
+            with open(MEX_MAPS_PATH.format(col=c), "r", encoding="utf-8") as f:
+                raw_map = json.load(f)  # {human_label: encoded_int}
+            gt_val = ground_truth[c]
+            if gt_val not in raw_map:
+                print(f"Ground truth value '{gt_val}' not found in map for column '{c}'")
+                return None, cols_to_fit
+            val = raw_map[gt_val]
+
+        return int(val), cols_to_fit
+    else:
+        print(f"Incorrect guess for column {c} or column not in dataset columns, {guess_correctness[c][0]=}, {c in mex_cols=}")
+        return None, cols_to_fit
+
+
+def process_col_srb(c, guess_correctness, ground_truth, cols_to_fit):
+    """Map a correctly-guessed Serbian attribute to its re-encoded integer for CorrectMatch."""
+    if c not in guess_correctness:
+        print("no field for column", c)
+        return None, cols_to_fit
+
+    if guess_correctness[c] is None or len(guess_correctness[c]) == 0:
+        print("none guess for column", c)
+        return None, cols_to_fit
+
+    if guess_correctness[c][0] == 1 and c in srb_cols:
+        cols_to_fit.append(c)
+
+        if c in SRB_NUMERIC_COLS:
+            try:
+                raw_val = int(float(ground_truth[c]))
+            except (ValueError, TypeError):
+                return None, cols_to_fit
+        else:
+            mapfile = SRB_COL_TO_MAPFILE[c]
+            with open(f"data/srb/maps/{mapfile}.json", "r", encoding="utf-8") as f:
+                raw_map = json.load(f)  # {human_label: encoded_int}
+            gt_val = ground_truth[c]
+            if gt_val not in raw_map:
+                print(f"Ground truth value '{gt_val}' not found in map for column '{c}'")
+                return None, cols_to_fit
+            raw_val = int(raw_map[gt_val])
+
+        encoder = SRB_ENCODERS[c]
+        if raw_val not in encoder:
+            print(f"Raw value {raw_val} not found in SRB encoder for column '{c}'")
+            return None, cols_to_fit
+        return encoder[raw_val], cols_to_fit
+    else:
+        return None, cols_to_fit
+
+
+def process_col_nl(c, guess_correctness, ground_truth, cols_to_fit):
+    """Map a correctly-guessed NL attribute to its encoded integer for CorrectMatch.
+
+    NL sample_enc.csv already stores values as {1,...,K}, so the map file code
+    can be used directly without a re-encoder.
+    """
+    if c not in guess_correctness:
+        print("no field for column", c)
+        return None, cols_to_fit
+
+    if guess_correctness[c] is None or len(guess_correctness[c]) == 0:
+        print("none guess for column", c)
+        return None, cols_to_fit
+
+    if guess_correctness[c][0] == 1 and c in nl_cols:
+        cols_to_fit.append(c)
+
+        stem = NL_COL_TO_MAPFILE_UNIQUENESS[c]
+        with open(f"data/nl/maps/{stem}_map.json", "r", encoding="utf-8") as f:
+            raw_map = json.load(f)  # {human_label: encoded_int}
+
+        gt_val = str(ground_truth[c])
+        # age_map keys are float strings ("47.0") but ground truth is cleaned to "47"
+        if gt_val not in raw_map:
+            try:
+                gt_val = str(float(gt_val))
+            except ValueError:
+                pass
+
+        if gt_val not in raw_map:
+            print(f"Ground truth value '{ground_truth[c]}' not found in NL map for column '{c}'")
+            return None, cols_to_fit
+
+        return int(raw_map[gt_val]), cols_to_fit
+    else:
+        return None, cols_to_fit
+
+
 def compute_correctness(model, record_to_analyze: List[int], n: int | None):
     if n is None:
         n = N
@@ -169,7 +364,8 @@ def fit_model_and_compute(cols_to_fit: List[str], record_to_analyze: List[int], 
     if df is None:
         dff = PUMS_DF[cols_to_fit]
     else:
-        dff = df[cols_to_fit]
+        # dropna handles conditional SRB columns (e.g. dom is NaN for never-married)
+        dff = df[cols_to_fit].dropna().astype(int)
 
     if n is None:
         n = N
@@ -202,9 +398,24 @@ def fit_model_and_compute(cols_to_fit: List[str], record_to_analyze: List[int], 
     return correctness, iu, model
 
 
-def compute_reid_risk(profiles, methods, attacker, results_path):
-    df = pd.read_csv("data/pums/pums_pwgtp_sample_.csv")
-    n = 306169200
+def compute_reid_risk(profiles, methods, attacker, results_path, dataset="PUMS"):
+    if dataset == "MEX":
+        df = pd.read_csv("data/es/personas_sample_enc.csv", usecols=mex_cols)
+        df = df.dropna().astype(int)
+        n = MEX_N
+        active_cols = mex_cols
+    elif dataset == "SRB":
+        df = SRB_DF_ENCODED  # already re-encoded to {1,...,K}; NaN preserved for conditional cols
+        n = SRB_N
+        active_cols = srb_cols
+    elif dataset == "NL":
+        df = NL_DF  # already encoded as {1,...,K}
+        n = NL_N
+        active_cols = nl_cols
+    else:
+        df = pd.read_csv("/data/natasa/pii_benchmark/data/pums/pums_pwgtp_sample_.csv")
+        n = 306169200
+        active_cols = pums_cols
 
 
     n_correct_atts = {k: [] for k in methods}
@@ -229,14 +440,38 @@ def compute_reid_risk(profiles, methods, attacker, results_path):
                 crctnss = profile[f"correctness_{anon_method}"]
             ids_list = []
 
+            srb_date_parts = {"dob-Day", "dob-Month", "dob-Year", "dom-Day", "dom-Month", "dom-Year"}
+            nl_date_parts = {"dob-Day", "dob-Month", "dob-Year"}
+
             for c in crctnss.keys():
-                if c in pums_cols:
+                if dataset == "SRB" and c in srb_date_parts:
+                    # These are evaluation-only sub-keys derived from dob/dom;
+                    # the full date columns are already in srb_cols and handled above.
+                    continue
+                if dataset == "NL" and c in nl_date_parts:
+                    # These are evaluation-only sub-keys derived from dob; the full dob column is already in nl_cols and handled above.
+                    continue
+
+                if c in active_cols:
                     # Indirect identifiers
-                    val, cols_to_fit = process_col(
-                        c, crctnss, profile["indirect_identifiers"], cols_to_fit
-                    )
+                    if dataset == "MEX":
+                        val, cols_to_fit = process_col_mex(
+                            c, crctnss, profile["indirect_identifiers"], cols_to_fit
+                        )
+                    elif dataset == "SRB":
+                        val, cols_to_fit = process_col_srb(
+                            c, crctnss, profile["indirect_identifiers"], cols_to_fit
+                        )
+                    elif dataset == "NL":
+                        val, cols_to_fit = process_col_nl(
+                            c, crctnss, profile["indirect_identifiers"], cols_to_fit
+                        )
+                    else:
+                        val, cols_to_fit = process_col(
+                            c, crctnss, profile["indirect_identifiers"], cols_to_fit
+                        )
                     if val is not None:
-                        if c=="zip code":
+                        if c == "zip code" and dataset not in ("MEX", "NL"):
                             record_to_analyze["PUMA_FULL"] = val
                         else:
                             record_to_analyze[c] = int(val)
@@ -252,9 +487,17 @@ def compute_reid_risk(profiles, methods, attacker, results_path):
             record = []
             ordered_cols = []
 
-            # sort columns in records
-            for c in pums_cols:
-                if c=="zip code":
+            # sort columns preserving dataset-appropriate order
+            if dataset == "MEX":
+                col_order = mex_cols
+            elif dataset == "SRB":
+                col_order = srb_cols
+            elif dataset == "NL":
+                col_order = nl_cols
+            else:
+                col_order = pums_cols
+            for c in col_order:
+                if c == "zip code" and dataset not in ("MEX", "SRB", "NL"):
                     if "PUMA_FULL" in record_to_analyze:
                         record.append(record_to_analyze["PUMA_FULL"])
                         ordered_cols.append("PUMA_FULL")
@@ -309,7 +552,7 @@ def compute_reid_risk(profiles, methods, attacker, results_path):
             if n_direct_ids > 0:
                 n_reided += 1
             else:
-                if correctness == 1:
+                if correctness >= 0.2:
                     n_reided += 1
         n_reided_per_method[m] = n_reided / len(profiles)
 
@@ -328,6 +571,7 @@ if __name__ == "__main__":
     parser.add_argument("--methods", type=str, default=None)
     parser.add_argument("--full_dataset", type=str, default="False")
     parser.add_argument("--attacker", type=str, default="False")
+    parser.add_argument("--dataset", type=str, default="PUMS")
     args = parser.parse_args()
 
     DATA_PATH = args.data_path
@@ -335,10 +579,11 @@ if __name__ == "__main__":
     METHODS = args.methods
     FULL_DATASET = args.full_dataset
     ATTACKER = args.attacker
+    DATASET = args.dataset
 
     profiles = []
     with open(DATA_PATH, "r") as f:
         for line in f:
             profiles.append(json.loads(line))
 
-    compute_reid_risk(profiles, METHODS, ATTACKER, RESULTS_PATH)
+    compute_reid_risk(profiles, METHODS, ATTACKER, RESULTS_PATH, dataset=DATASET)

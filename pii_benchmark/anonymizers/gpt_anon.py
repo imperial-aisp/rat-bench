@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, override
 from openai import OpenAI
 
 from pii_benchmark.anonymizers.anonymizer import Anonymizer
@@ -8,29 +8,25 @@ from pii_benchmark.prompts import get_anonymization_prompt
 from pii_benchmark.credentials import openai_api_key
 
 class GPTAnonymizer(Anonymizer):
-    def __init__(self, prompt_type: str, attributes: List[str], model_version: str="gpt-4.1"):
+    def __init__(self, prompt_type: str, attributes: List[str], model_version: str="gpt-4.1", language: str = "English"):
         super().__init__()
         self.prompt_type = prompt_type
         self.attributes = attributes
         self.model_version = model_version
+        self.language = language
         self.client = OpenAI(api_key=openai_api_key)
 
+
     def anonymize(
-        self, text: str, prompt_type: str = None, attributes: List[str] = None, scenario: str = "medical"
+        self, text: str, scenario: str = "medical", prompt_type: str|None = None, attributes: List[str]|None = None
     ) -> str:
         if prompt_type == None:
             pt = self.prompt_type
         else:
             pt = prompt_type
-        if attributes == None:
-            atts = self.attributes
-        else:
-            atts = attributes
         
-        if scenario is None:
-            scenario = self.scenario
         prompt = get_anonymization_prompt(
-            pt, text, atts, instruct_template=False, scenario=scenario
+            pt, text, attributes, instruct_template=False, scenario=scenario, language=self.language
         )
         
         if pt=="clio":
@@ -57,14 +53,12 @@ class GPTAnonymizer(Anonymizer):
         if pt=="rescriber":
             redacted_text = text
             entities = parse_results_rescriber(response.output_text)
+            print("entities:" + str(entities))
+            if len(entities) > 0 and "results" in entities[0]:
+                entities = entities[0]["results"]
             for e in entities:
                 entity_text = e["text"]
-                while entity_text in redacted_text:
-                    start = redacted_text.find(entity_text)
-                    end = start + len(entity_text)
-                    redacted_text = (
-                        redacted_text[:start] + ("*" * len(entity_text)) + redacted_text[end:]
-                    )
+                redacted_text = redacted_text.replace(entity_text, "*" * len(entity_text))
             anon_text = redacted_text
         else:
             anon_text = response.output_text
@@ -75,7 +69,7 @@ class GPTAnonymizer(Anonymizer):
         return anon_text
     
 
-def parse_results_rescriber(output) -> str:
+def parse_results_rescriber(output) -> List[dict]:
     lines = output.splitlines()
 
     entities = []
@@ -88,7 +82,7 @@ def parse_results_rescriber(output) -> str:
             try:
                 entity = json.loads(line)
                 entities.append(entity)
-            except:
+            except json.JSONDecodeError:
                 pass
     if entities==[]:
         i = 0

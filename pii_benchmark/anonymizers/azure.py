@@ -23,7 +23,7 @@ QUANTITY_SUBGROUPS = ["Age", "Currency", "Number"]
 
 
 class AzureAnonymizer(Anonymizer):
-    def __init__(self, attributes=None):
+    def __init__(self, attributes=None, language="en"):
         super().__init__()
         self.recognizer = TextAnalyticsClient(
             endpoint=azure_resource_link,
@@ -31,6 +31,7 @@ class AzureAnonymizer(Anonymizer):
         )
         self.entities_to_remove = ENTITIES_TO_REMOVE
         self.quantity_subgroups = QUANTITY_SUBGROUPS
+        self.language = language
         # if attributes is None or "NRP" in attributes:
         #     self.entities_to_remove = entities_to_remove
         #     self.quantity_subgroups = quantity_subgroups
@@ -38,10 +39,10 @@ class AzureAnonymizer(Anonymizer):
         #     self.entities_to_remove = attributes
         #     self.quantity_subgroups = []
 
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str = "") -> str:
 
         if len(text)<5000:
-            entities_results = self.recognizer.recognize_entities([text])[0]
+            entities_results = self.recognizer.recognize_entities([text], language=self.language)[0]
             if not entities_results.is_error:
                 redacted_text = self.remove_entities(text, entities_results.entities)
             else:
@@ -50,7 +51,7 @@ class AzureAnonymizer(Anonymizer):
             n_chunks = len(text)//5000 + 1
             redacted_text = ""
             for chunk in range(n_chunks):
-                entities_results = self.recognizer.recognize_entities([text[chunk*5000:(chunk+1)*5000]])[0]
+                entities_results = self.recognizer.recognize_entities([text[chunk*5000:(chunk+1)*5000]], language=self.language)[0]
                 if not entities_results.is_error:
                     redacted_text += self.remove_entities(text[chunk*5000:(chunk+1)*5000], entities_results.entities)
                 else:

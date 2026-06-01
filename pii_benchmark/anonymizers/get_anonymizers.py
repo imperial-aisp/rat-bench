@@ -2,6 +2,7 @@ from typing import List
 
 from pii_benchmark.anonymizers.anonymizer import Anonymizer
 from pii_benchmark.anonymizers.azure import AzureAnonymizer
+from pii_benchmark.anonymizers.euguardrail import EUGuardrailAnonymizer
 from pii_benchmark.anonymizers.gemini import GeminiAnonymizer
 from pii_benchmark.anonymizers.gliner import GlinerAnonymizer
 from pii_benchmark.anonymizers.iterative import IterativeAnonymizer
@@ -21,6 +22,12 @@ def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymi
     match method:
         case "presidio":
             return PresidioAnonymizer()
+        case "presidio_es":
+            return PresidioAnonymizer(language="es")
+        case "presidio_srb":
+            return PresidioAnonymizer(language="sr")
+        case "presidio_nl":
+            return PresidioAnonymizer(language="nl")
         case "gliner":
             return GlinerAnonymizer()
         case "gemini":
@@ -43,8 +50,16 @@ def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymi
                                             "race", "citizenship status", "educational attainment", "state of residence", "occupation", \
                                             "marital status", "employment status", "date of birth", "age"], model_version=kwargs["gemini_version"], 
                                     prompt_type="anthropic_attributes")
+        case "gemini_public":
+            return GeminiAnonymizer(attributes=None, prompt_type="public_info", model_version=kwargs["gemini_version"])
         case "azure":
             return AzureAnonymizer()
+        case "azure_es":
+            return AzureAnonymizer(language="es")
+        case "azure_srb":
+            return AzureAnonymizer(language="sr")
+        case "azure_nl":
+            return AzureAnonymizer(language="nl")
         case "uniner":
             return UninerAnonymizer(attributes=["SSN", "phone number", "credit card number", "email", "name", "address", \
                                                 "race", "citizenship status", "educational attainment", "state of residence", "occupation", \
@@ -59,13 +74,23 @@ def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymi
                                            "race", "citizenship status", "educational attainment", "state of residence", "occupation", \
                                             "marital status", "employment status", "date of birth", "age"], model_version=kwargs["llama_version"],
                                             prompt_type="anthropic_attributes")
+        case "llama_public":
+            return LlamaAnonymizer(attributes=None, prompt_type="public_info", model_version=kwargs["llama_version"])
         case "scrubadub":
             return ScrubadubAnonymizer(attributes=attributes)
+        case "scrubadub_es":
+            return ScrubadubAnonymizer(locale="es_MX", attributes=attributes)
+        case "scrubadub_nl":
+            return ScrubadubAnonymizer(locale="nl_BE", attributes=attributes)
+        # case "scrubadub_srb":
+        #     return ScrubadubAnonymizer(locale="cr_RS", attributes=attributes)
         case "iterative":
             return IterativeAnonymizer(model_version=kwargs["gpt_version"],
                                        attribute_list=kwargs["attribute_list_iterative"])
         case "textwash":
             return TextWashAnonymizer()
+        case "textwash_nl":
+            return TextWashAnonymizer(language="nl")
         case "llama_clio":
             return LlamaClioAnonymizer(attributes=None, prompt_type="clio", scenario=kwargs["scenario"])
         case "llama_rescriber":
@@ -88,11 +113,16 @@ def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymi
             return GPTAnonymizer(attributes=None, prompt_type="rescriber", model_version=kwargs["gpt_version"])
         case "gpt_clio":
             return GPTAnonymizer(attributes=None, prompt_type="clio", model_version=kwargs["gpt_version"])
+        case "gpt_public":
+            return GPTAnonymizer(attributes=None, prompt_type="public_info", model_version=kwargs["gpt_version"])
         case "madlib":
             return MadlibAnonymizer(epsilon=kwargs["epsilon"])
         case "tem":
             return TEMAnonymizer(epsilon=kwargs["epsilon"])
         case "dp_prompt_gpt":
             return DPPromptAnonymizer(model_version=kwargs["gpt_version"], temperature=kwargs["temperature"])
+        case "eu_guardrail":
+            return EUGuardrailAnonymizer()
         #### new anonymizer here
-        
+        case _:
+            raise ValueError(f"Unknown anonymizer: {method!r}")

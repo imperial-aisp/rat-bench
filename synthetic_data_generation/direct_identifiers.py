@@ -11,6 +11,265 @@ PATH_TO_DATA = "./data/"
 FIRST_NAME_DF = pd.read_csv(os.path.join(PATH_TO_DATA, "first_name_all_years.csv"))
 LAST_NAME_DF = pd.read_csv(os.path.join(PATH_TO_DATA, "last_name.csv"))
 
+# Mexican name data — loaded lazily so PUMS-only runs are unaffected
+_MEX_FIRST_NAME_DF = None
+_MEX_LAST_NAME_DF = None
+
+# Serbian name data — hardcoded (all SRB profiles are from a women's survey)
+_SRB_FEMALE_FIRST_NAMES = [
+    "Ana", "Marija", "Jelena", "Milica", "Jovana", "Ivana", "Katarina",
+    "Dragana", "Slavica", "Vesna", "Snežana", "Biljana", "Maja", "Sandra",
+    "Tijana", "Nina", "Aleksandra", "Zorica", "Ljubica", "Gordana",
+    "Natalija", "Tamara", "Sanja", "Svetlana", "Jasmina", "Mirjana",
+    "Radmila", "Danijela", "Nevena", "Kristina",
+]
+_SRB_LAST_NAMES = [
+    "Jovanović", "Petrović", "Nikolić", "Marković", "Đorđević",
+    "Stojanović", "Ilić", "Stanković", "Popović", "Lazarević",
+    "Simić", "Savić", "Milošević", "Radovanović", "Stefanović",
+    "Filipović", "Đurić", "Vasić", "Ristić", "Pavlović",
+    "Kostić", "Bogdanović", "Todorović", "Kovačević", "Živković",
+    "Arsić", "Vuković", "Ninković", "Milenković", "Lukić",
+]
+
+def _load_mex_names():
+    global _MEX_FIRST_NAME_DF, _MEX_LAST_NAME_DF
+    if _MEX_FIRST_NAME_DF is None:
+        _MEX_FIRST_NAME_DF = pd.read_csv(os.path.join(PATH_TO_DATA, "es/MEX_names.csv"))
+        _MEX_LAST_NAME_DF = pd.read_csv(os.path.join(PATH_TO_DATA, "es/mexico_surnames.csv"))
+
+
+def get_full_name_mex(sex: str) -> str:
+    """Sample a full Mexican name conditioned on sex ('Mujer' or 'Hombre')."""
+    _load_mex_names()
+    gender = "Female" if sex == "Mujer" else "Male"
+    sub = _MEX_FIRST_NAME_DF[_MEX_FIRST_NAME_DF["gender"] == gender].copy()
+    total = sub["frequency"].sum()
+    first = np.random.choice(sub["name"].values, p=sub["frequency"].values / total)
+    first = first.strip().capitalize()
+    total_s = _MEX_LAST_NAME_DF["incidence"].sum()
+    last = np.random.choice(
+        _MEX_LAST_NAME_DF["surname"].values,
+        p=_MEX_LAST_NAME_DF["incidence"].values / total_s,
+    )
+    return first + " " + last.strip().capitalize()
+
+
+_CURP_VOWELS = "AEIOU"
+_CURP_CONSONANTS = "BCDFGHJKLMNÑPQRSTVWXYZ"
+_MEX_STATE_CODES = [
+    "AS", "BC", "BS", "CC", "CL", "CM", "CS", "CH", "DF", "DG",
+    "GT", "GR", "HG", "JC", "MC", "MN", "MS", "NT", "NL", "OC",
+    "PL", "QT", "QR", "SP", "SL", "SR", "TC", "TS", "TL", "VZ",
+    "YN", "ZS",
+]
+
+def generate_curp() -> str:
+    """Generate a plausible but fake 18-character CURP."""
+    letters = (
+        random.choice("BCDFGHJKLMNPQRSTVWXYZ")
+        + random.choice(_CURP_VOWELS)
+        + random.choice("BCDFGHJKLMNPQRSTVWXYZ")
+        + random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    )
+    yy = random.randint(0, 99)
+    mm = random.randint(1, 12)
+    dd = random.randint(1, 28)
+    date_part = f"{yy:02d}{mm:02d}{dd:02d}"
+    sex_char = random.choice(["H", "M"])
+    state = random.choice(_MEX_STATE_CODES)
+    consonants = "".join(random.choice(_CURP_CONSONANTS) for _ in range(3))
+    century = random.choice("0123456789A")
+    check = str(random.randint(0, 9))
+    return letters + date_part + sex_char + state + consonants + century + check
+
+
+_MEX_LADAS = ["55", "33", "81", "222", "229", "477", "442", "614", "667", "998"]
+
+def generate_mexican_phone() -> str:
+    """Generate a realistic 10-digit Mexican mobile number."""
+    lada = random.choice(_MEX_LADAS)
+    remaining = 10 - len(lada)
+    digits = "".join(str(random.randint(0, 9)) for _ in range(remaining))
+    return lada + digits
+
+
+_MEX_STREETS = [
+    "Insurgentes", "Reforma", "Hidalgo", "Juárez", "Morelos", "Revolución",
+    "Independencia", "Benito Juárez", "Miguel Hidalgo", "Francisco Madero",
+    "Venustiano Carranza", "Emiliano Zapata", "Lázaro Cárdenas", "Álvaro Obregón",
+    "Cinco de Mayo", "16 de Septiembre", "Constitución", "República",
+]
+_MEX_COLONIAS = [
+    "Centro", "Roma Norte", "Condesa", "Polanco", "Del Valle", "Narvarte",
+    "Doctores", "Santa María la Ribera", "San Rafael", "Coyoacán",
+    "Tlalpan", "Pedregal", "Ecatepec", "Lindavista", "Portales",
+]
+_MEX_CITY_STATE = [
+    ("Ciudad de México", "CDMX"), ("Guadalajara", "Jalisco"), ("Monterrey", "Nuevo León"),
+    ("Puebla", "Puebla"), ("Tijuana", "Baja California"), ("León", "Guanajuato"),
+    ("Mérida", "Yucatán"), ("Cancún", "Quintana Roo"), ("San Luis Potosí", "San Luis Potosí"),
+    ("Querétaro", "Querétaro"), ("Culiacán", "Sinaloa"), ("Hermosillo", "Sonora"),
+    ("Chihuahua", "Chihuahua"), ("Zapopan", "Jalisco"), ("Ecatepec", "Estado de México"),
+]
+
+def get_full_name_srb() -> str:
+    """Sample a full Serbian female name (all SRB profiles are from a women's survey)."""
+    first = random.choice(_SRB_FEMALE_FIRST_NAMES)
+    last = random.choice(_SRB_LAST_NAMES)
+    return f"{first} {last}"
+
+
+_SRB_REGION_CODES = ["71", "72", "73", "74", "75"]
+
+
+def _jmbg_check(digits12: str) -> int:
+    """Compute JMBG check digit from first 12 digits. Returns 10 if invalid."""
+    d = [int(c) for c in digits12]
+    s = (7*(d[0]+d[6]) + 6*(d[1]+d[7]) + 5*(d[2]+d[8]) +
+         4*(d[3]+d[9]) + 3*(d[4]+d[10]) + 2*(d[5]+d[11]))
+    k = 11 - (s % 11)
+    return 0 if k == 11 else k
+
+
+def generate_jmbg() -> str:
+    """Generate a plausible but fake 13-digit Serbian JMBG."""
+    while True:
+        dd = random.randint(1, 28)
+        mm = random.randint(1, 12)
+        yy = random.randint(1970, 2004)
+        yyy = str(yy)[-3:]
+        rr = random.choice(_SRB_REGION_CODES)
+        bbb = str(random.randint(500, 999))  # 500–999 = female range
+        base = f"{dd:02d}{mm:02d}{yyy}{rr}{bbb}"
+        k = _jmbg_check(base)
+        if k != 10:
+            return base + str(k)
+
+
+_SRB_MOBILE_PREFIXES = ["060", "061", "062", "063", "064", "065", "066", "069"]
+
+
+def generate_serbian_phone() -> str:
+    """Generate a realistic Serbian mobile phone number."""
+    prefix = random.choice(_SRB_MOBILE_PREFIXES)
+    digits = "".join(str(random.randint(0, 9)) for _ in range(7))
+    return f"{prefix}/{digits[:3]}-{digits[3:]}"
+
+
+_SRB_STREETS = [
+    "Knez Mihailova", "Kralja Aleksandra", "Makedonska", "Nemanjina",
+    "Terazije", "Savska", "Vojvode Stepe", "Bulevar oslobođenja",
+    "Cara Dušana", "Svetogorska", "Francuska", "Nušićeva",
+    "Zmaj Jovina", "Obilićev venac", "Jurija Gagarina",
+]
+_SRB_CITIES = [
+    ("Beograd", "11000"), ("Novi Sad", "21000"), ("Niš", "18000"),
+    ("Kragujevac", "34000"), ("Subotica", "24000"), ("Zrenjanin", "23000"),
+    ("Pančevo", "26000"), ("Čačak", "32000"), ("Leskovac", "16000"),
+    ("Smederevo", "11300"),
+]
+
+
+def generate_serbian_address() -> str:
+    """Generate a plausible Serbian residential address."""
+    street = random.choice(_SRB_STREETS)
+    number = random.randint(2, 150)
+    city, postal = random.choice(_SRB_CITIES)
+    return f"{street} {number}, {postal} {city}, Srbija"
+
+
+def generate_mexican_address() -> str:
+    """Generate a plausible Mexican residential address."""
+    street = random.choice(_MEX_STREETS)
+    number = random.randint(2, 999)
+    colonia = random.choice(_MEX_COLONIAS)
+    city, state = random.choice(_MEX_CITY_STATE)
+    return f"Calle {street} #{number}, Col. {colonia}, {city}, {state}, México"
+
+
+# ── Flemish/Belgian (NL) name and identifier generators ───────────────────────
+
+_NL_MALE_FIRST_NAMES = [
+    "Liam", "Ruben", "Finn", "Lars", "Mathis", "Pieter", "Thomas", "Luca",
+    "Noel", "Arne", "Wout", "Bram", "Jens", "Jonas", "Sander", "Kobe",
+    "Niels", "Joris", "Stef", "Maarten", "Wouter", "Bert", "Tim", "Kevin",
+    "Alexander", "Nicolas", "Simon", "Michiel", "Kristof", "Dieter",
+]
+_NL_FEMALE_FIRST_NAMES = [
+    "Emma", "Olivia", "Nora", "Lena", "Fien", "Julie", "Laura", "Sara",
+    "Elien", "Amber", "Sofie", "Lisa", "Lore", "An", "Ines",
+    "Charlotte", "Hannah", "Katrien", "Lies", "Nathalie", "Elke", "Silke",
+    "Annelies", "Manon", "Ilse", "Griet", "Lien", "Ellen", "Karen", "Hailey",
+]
+_NL_LAST_NAMES = [
+    "De Smedt", "Janssen", "Maes", "Claes", "Willems", "Peeters", "De Backer",
+    "Hermans", "Wouters", "Smeets", "Mertens", "Jacobs", "Van den Berg",
+    "De Graef", "Pieters", "Stevens", "Dubois", "Lambert", "Leclercq",
+    "Desmet", "Vermeersch", "Van Acker", "Bogaert", "Cools", "Nijs",
+    "De Wolf", "Claessens", "Goossens", "Hendrickx", "Martens",
+]
+
+
+def get_full_name_nl(sex: str) -> str:
+    """Sample a full Flemish name conditioned on sex ('Male' or 'Female')."""
+    if sex == "Female":
+        first = random.choice(_NL_FEMALE_FIRST_NAMES)
+    else:
+        first = random.choice(_NL_MALE_FIRST_NAMES)
+    last = random.choice(_NL_LAST_NAMES)
+    return f"{first} {last}"
+
+
+def generate_rrn() -> str:
+    """Generate a plausible but fake Belgian rijksregisternummer (YY.MM.DD-NNN.CC)."""
+    yy = random.randint(40, 99)
+    mm = random.randint(1, 12)
+    dd = random.randint(1, 28)
+    nnn = random.randint(1, 998)
+    base = int(f"{yy:02d}{mm:02d}{dd:02d}{nnn:03d}")
+    cc = 97 - (base % 97)
+    if cc == 0:
+        cc = 97
+    return f"{yy:02d}.{mm:02d}.{dd:02d}-{nnn:03d}.{cc:02d}"
+
+
+_NL_MOBILE_PREFIXES = [
+    "0470", "0471", "0472", "0473", "0474", "0475",
+    "0476", "0477", "0478", "0479", "0485", "0486",
+    "0487", "0488", "0489", "0494", "0495", "0496",
+]
+
+
+def generate_nl_phone() -> str:
+    """Generate a realistic Belgian mobile phone number."""
+    prefix = random.choice(_NL_MOBILE_PREFIXES)
+    digits = "".join(str(random.randint(0, 9)) for _ in range(6))
+    return f"{prefix} {digits[:2]} {digits[2:4]} {digits[4:]}"
+
+
+_NL_STREETS = [
+    "Kerkstraat", "Stationstraat", "Schoolstraat", "Dorpsstraat", "Molenstraat",
+    "Nieuwstraat", "Kasteeldreef", "Lindenlaan", "Bosstraat", "Veldstraat",
+    "Antwerpsestraat", "Gentsestraat", "Brugsestraat", "Kapelstraat",
+    "Vrijheidslaan", "Mechelsesteenweg", "Leuvensesteenweg", "Ringlaan",
+]
+_NL_CITIES = [
+    ("Gent", "9000"), ("Antwerpen", "2000"), ("Brugge", "8000"),
+    ("Leuven", "3000"), ("Hasselt", "3500"), ("Mechelen", "2800"),
+    ("Kortrijk", "8500"), ("Aalst", "9300"), ("Sint-Niklaas", "9100"),
+    ("Genk", "3600"), ("Roeselare", "8800"), ("Turnhout", "2300"),
+]
+
+
+def generate_nl_address() -> str:
+    """Generate a plausible Flemish residential address."""
+    street = random.choice(_NL_STREETS)
+    number = random.randint(2, 150)
+    city, postal = random.choice(_NL_CITIES)
+    return f"{street} {number}, {postal} {city}, België"
+
+
 def get_full_name(gender, age, min_year=1880, max_year=2024):
     '''
     Generate a full name based on gender and age.

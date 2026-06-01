@@ -13,12 +13,12 @@ class TextWashAnonymizer(Anonymizer):
         super().__init__()
         self.config = Config(language=language)
         self.attributes = assert_entities(attributes, self.config.path_to_model) if attributes != "" else None
-        self.tokenizer = AutoTokenizer.from_pretrained(self.config.path_to_model)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.config.path_to_model, local_files_only=False)
         self.model = AutoModelForTokenClassification.from_pretrained(self.config.path_to_model)
         self.classifier = pipeline("ner", model=self.model, tokenizer=self.tokenizer, device=torch.device("cuda:0" if not cpu else "cpu"))
         self.anonymizer = TextWashBackend(self.config, self.classifier)
 
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str="") -> str:
         anonymized_text = self.anonymizer.anonymize(
             text, selected_entities=self.attributes
         )

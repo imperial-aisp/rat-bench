@@ -1,4 +1,5 @@
 azure_api_key =""
 azure_resource_link = ""
+deepseek_api_key = ""
 gemini_api_key = ""
 openai_api_key = ""

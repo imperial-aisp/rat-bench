@@ -72,7 +72,7 @@ class MadlibAnonymizer(Anonymizer):
         self.index = AnnoyIndexer(self.model, num_trees)
         pandarallel.initialize(progress_bar=True)
         
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str = "") -> str:
         
         anonymized_text = madlib(
             review=text,

@@ -168,7 +168,7 @@ class TEMAnonymizer(Anonymizer):
         self.gumbel_sampler = torch.distributions.gumbel.Gumbel(mean, scale)
         self.cuda_vectors = torch.from_numpy(self.model.vectors).float().cuda()
         
-    def anonymize(self, text: str) -> str:
+    def anonymize(self, text: str, scenario: str = "") -> str:
         
         anonymized_text = tem_review(
             review=text,

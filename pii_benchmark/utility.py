@@ -4,7 +4,7 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from typing import Tuple
 
 
-def utility_scores(text: str, reference: str) -> Tuple[int]:
+def utility_scores(text: str, reference: str) -> Tuple[int, int]:
     # Tokenize
     hyp_tokens = nltk.word_tokenize(text)
     ref_tokens = nltk.word_tokenize(reference)

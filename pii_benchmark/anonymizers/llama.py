@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import Dict, List
 from tqdm import tqdm
 from transformers import pipeline
 
@@ -17,12 +17,12 @@ class LlamaAnonymizer(Anonymizer):
         self.scenario = scenario
 
     def anonymize(
-        self, text: str, prompt_type: str = None, attributes: List[str] = None
+        self, text: str, scenario: str = "", attributes: List[str] | None = None, prompt_type: str | None = None,
     ) -> str:
         if prompt_type == None:
             pt = self.prompt_type
         elif prompt_type == "rescriber":
-            return self.anonymize_rescriber(text)
+            return self.anonymize_rescriber(text, scenario)
         elif prompt_type=="clio":
             return self.anonymize_clio(text)
         else:
@@ -46,7 +46,7 @@ class LlamaAnonymizer(Anonymizer):
                 anon_text = r["content"]
         return anon_text
     
-    def anonymize_rescriber(self, text: str) -> str:
+    def anonymize_rescriber(self, text: str, scenario: str = "") -> str:
         redacted_text = text
         entities = []
 
@@ -77,7 +77,7 @@ class LlamaAnonymizer(Anonymizer):
 
         return redacted_text
     
-    def parse_results(self, output) -> str:
+    def parse_results(self, output) -> List[Dict[str, str]]:
         lines = output.splitlines()
 
         entities = []
@@ -90,7 +90,7 @@ class LlamaAnonymizer(Anonymizer):
                 try:
                     entity = json.loads(line)
                     entities.append(entity)
-                except:
+                except json.JSONDecodeError:
                     pass
         if entities==[]:
             i = 0
@@ -116,7 +116,7 @@ class LlamaAnonymizer(Anonymizer):
     def anonymize_clio(
             self, text:str
     ):
-        prompt1, prompt2 = get_anonymization_prompt(method="clio", text=text, scenario=self.scenario)
+        prompt1 = get_anonymization_prompt(method="clio", text=text, scenario=self.scenario)
         prompt1 = prompt1 + "\n{text}</conversation>"
 
         chat = [
@@ -127,20 +127,20 @@ class LlamaAnonymizer(Anonymizer):
         response1 = ""
         for r in response[0]["generated_text"]:
             if r["role"] == "assistant":
-                response1 = r["content"]
-
-        chat.append({
-                    "role": "assistant", "content": response1
-                    }
-        )
-        chat.append({
-            "role": "user", "content": prompt2
-        })
-
-        response = self.model(chat, max_new_tokens=4096)
-        anon_text = ""
-        for r in response[0]["generated_text"]:
-            if r["role"] == "assistant":
                 anon_text = r["content"]
+
+        # chat.append({
+        #             "role": "assistant", "content": response1
+        #             }
+        # )
+        # chat.append({
+        #     "role": "user", "content": prompt2
+        # })
+
+        # response = self.model(chat, max_new_tokens=4096)
+        # anon_text = ""
+        # for r in response[0]["generated_text"]:
+        #     if r["role"] == "assistant":
+        #         anon_text = r["content"]
     
         return anon_text

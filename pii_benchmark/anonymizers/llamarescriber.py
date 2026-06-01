@@ -1,7 +1,7 @@
 import json
 from transformers import pipeline
 from pii_benchmark.anonymizers.anonymizer import Anonymizer
-from typing import List
+from typing import Dict, List
 
 from pii_benchmark.prompts import get_anonymization_prompt
 
@@ -15,11 +15,11 @@ class LlamaRescriberAnonymizer(Anonymizer):
         self.model = pipeline("text-generation", model=f"meta-llama/Llama-{model_version}")
         self.scenario = scenario
 
-    def anonymize(self, text: str, scenario: str = None) -> str:
+    def anonymize(self, text: str, scenario: str = "") -> str:
         redacted_text = text
-        entities = []
+        entities: List[Dict[str, str]] = []
 
-        if scenario is None:
+        if scenario=="":
             scenario = self.scenario
 
         prompt = get_anonymization_prompt(
@@ -34,8 +34,8 @@ class LlamaRescriberAnonymizer(Anonymizer):
         response = self.model(chat, max_new_tokens=4096)
         for r in response[0]["generated_text"]:
             if r["role"] == "assistant":
-                response = r["content"]
-        entities = self.parse_results(response)
+                resp = r["content"]
+        entities = self.parse_results(resp)
 
         for e in entities:
             entity_text = e["text"]
@@ -61,7 +61,7 @@ class LlamaRescriberAnonymizer(Anonymizer):
                 try:
                     entity = json.loads(line)
                     entities.append(entity)
-                except:
+                except json.JSONDecodeError:
                     pass
         if entities==[]:
             i = 0

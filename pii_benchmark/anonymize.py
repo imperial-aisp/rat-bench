@@ -7,16 +7,34 @@ from pii_benchmark.anonymizers.get_anonymizers import get_anonymizer
 import argparse
 import time
 
+from pii_benchmark.utility import utility_scores
 from synthetic_data_generation.utils import write_output_async
 
+
+def _run_anonymizer_loop(anonymizer, profiles, output_key, output_file, timing_flag, utility_flag, call_fn):
+    """Run anonymization over all profiles, recording timing and results."""
+    for profile in tqdm(profiles):
+        if timing_flag:
+            start_time = time.perf_counter()
+        profile[f"text_anon_{output_key}"] = call_fn(anonymizer, profile)
+        if timing_flag:
+            profile[f"runtime_{output_key}"] = time.perf_counter() - start_time
+        if utility_flag:
+            scores = utility_scores(profile[f"text_anon_{output_key}"], profile["text"])
+            profile[f"rouge_score_{output_key}"] = scores[0]
+            profile[f"bleu_score_{output_key}"] = scores[1]
+
+    write_output_async(output_file, profiles)
+
+
 # Anonymization main function
-def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path:str, scenario:str, level:int,
+def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path:str, scenario:str, language:str, level:int,
                       gemini_version:str|None=None, llama_version:str|None=None, gpt_version:str|None=None,
                       epsilon:int|None=None, temperature:int|None=None, attribute_list_iterative:str|None=None,
-                      timing_flag:bool=True):
+                      timing_flag:bool=True, utility_flag:bool=True):
     print("Anonymizing")
     print(f"Will save results to {results_path}")
-    llama_idx = None
+    llama_idx = -1
 
     anonymizers = [
         get_anonymizer(
@@ -27,7 +45,8 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
             scenario=scenario,
             epsilon=epsilon,
             temperature=temperature,
-            attribute_list_iterative=attribute_list_iterative
+            attribute_list_iterative=attribute_list_iterative,
+            language=language
         )
         if anon_method not in ["llama_basic", "llama_full", "llama", "llama_clio", "llama_rescriber"]
         else None
@@ -42,7 +61,7 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
         or "llama_rescriber" in anon_methods
     ):
         anonymizers.append(
-            get_anonymizer(method="llama", llama_version=LLAMA_VERSION, scenario=SCENARIO)
+            get_anonymizer(method="llama", llama_version=llama_version, scenario=scenario)
         )
         llama_idx = len(anonymizers) - 1
 
@@ -79,147 +98,57 @@ def run_anonymization(profiles: List[dict], anon_methods:List[str], results_path
     output_file = output_base if output_base.suffix == ".jsonl" else output_base / f"level_{level}.jsonl"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for i, anonymizer in enumerate(anon_methods):
-        print(f"Anonymizing with {anon_methods[i]}")
+    for i, method in enumerate(anon_methods):
+        print(f"Anonymizing with {method}")
 
-        if anon_methods[i] == "llama":
-            anonymizer = anonymizers[-1]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(
-                    profile["text"],
-                    prompt_type="anthropic_attributes",
-                    attributes=llama_attributes["llama"],
-                    scenario=profile["scenario"]
-                )
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_llama"] = end_time - start_time
-                profile[f"text_anon_llama"] = anon_text
-            write_output_async(output_file, profiles)
-        
-        elif anon_methods[i] == "llama_full":
-            anonymizer = anonymizers[-1]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizers[llama_idx].anonymize(
-                    profile["text"],
-                    prompt_type="anthropic_attributes",
-                    attributes=llama_attributes["llama_full"],
-                    scenario=profile["scenario"]
-                )
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_llama_full"] = end_time - start_time
-                profile[f"text_anon_llama_full"] = anon_text
-            write_output_async(output_file, profiles)
-        
-        elif anon_methods[i] == "llama_basic":
-            anonymizer = anonymizers[-1]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizers[llama_idx].anonymize(
-                    profile["text"], prompt_type="anthropic", scenario=profile["scenario"]
-                )
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_llama_basic"] = end_time - start_time
-                profile[f"text_anon_llama_basic"] = anon_text
-            write_output_async(output_file, profiles)
-
-        elif anon_methods[i]=="llama_rescriber":
-            anonymizer = anonymizers[-1]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizers[llama_idx].anonymize(
-                    profile["text"], prompt_type="rescriber", scenario=profile["scenario"]
-                )
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_llama_rescriber"] = end_time - start_time
-                profile[f"text_anon_llama_rescriber"] = anon_text
-            write_output_async(output_file, profiles)
-
-        elif anon_methods[i]=="llama_clio":
-            anonymizer = anonymizers[-1]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizers[llama_idx].anonymize(
-                    profile["text"], prompt_type="clio", scenario=profile["scenario"]
-                )
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_llama_clio"] = end_time - start_time
-                profile[f"text_anon_llama_clio"] = anon_text
-            write_output_async(output_file, profiles)
-
-        elif anon_methods[i] == "iterative":
-            anonymizer = anonymizers[i]
+        if method == "llama":
+            _run_anonymizer_loop(
+                anonymizers[llama_idx], profiles, "llama", output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p["text"], prompt_type="anthropic_attributes",
+                                         attributes=llama_attributes["llama"], scenario=p["scenario"])
+            )
+        elif method == "llama_full":
+            _run_anonymizer_loop(
+                anonymizers[llama_idx], profiles, "llama_full", output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p["text"], prompt_type="anthropic_attributes",
+                                         attributes=llama_attributes["llama_full"], scenario=p["scenario"])
+            )
+        elif method == "llama_basic":
+            _run_anonymizer_loop(
+                anonymizers[llama_idx], profiles, "llama_basic", output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p["text"], prompt_type="anthropic", scenario=p["scenario"])
+            )
+        elif method == "llama_rescriber":
+            _run_anonymizer_loop(
+                anonymizers[llama_idx], profiles, "llama_rescriber", output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p["text"], prompt_type="rescriber", scenario=p["scenario"])
+            )
+        elif method == "llama_clio":
+            _run_anonymizer_loop(
+                anonymizers[llama_idx], profiles, "llama_clio", output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p["text"], prompt_type="clio", scenario=p["scenario"])
+            )
+        elif method == "iterative":
             print(f"Iterative anonymizer, attribute list = {attribute_list_iterative}")
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile)
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_{anon_methods[i]}_{attribute_list_iterative}"] = end_time - start_time
-                profile[f"text_anon_{anon_methods[i]}_{attribute_list_iterative}"] = anon_text
-            write_output_async(output_file, profiles)
-        
-        elif anon_methods[i]=="llama_clio":
-            anonymizer = anonymizers[i]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile, scenario=profile["scenario"])
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_{anon_methods[i]}"] = end_time - start_time
-                profile[f"text_anon_{anon_methods[i]}"] = anon_text
-            write_output_async(output_file, profiles)
-
-        elif anon_methods[i]=="madlib" or anon_methods[i]=="tem":
-            # make sure we write epsilon to the output
-            anonymizer = anonymizers[i]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile["text"], scenario=profile["scenario"])
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_{anon_methods[i]}_eps{EPSILON}"] = end_time - start_time
-                profile[f"text_anon_{anon_methods[i]}_eps{EPSILON}"] = anon_text
-            write_output_async(output_file, profiles)
-                
-        elif anon_methods[i]=="dp_prompt_gpt":
-            # make sure we write temperature to the output
-            anonymizer = anonymizers[i]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile["text"], scenario=profile["scenario"])
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_{anon_methods[i]}_temp{TEMPERATURE}"] = end_time - start_time
-                profile[f"text_anon_{anon_methods[i]}_temp{TEMPERATURE}"] = anon_text
-            write_output_async(output_file, profiles)
-        
+            _run_anonymizer_loop(
+                anonymizers[i], profiles, f"iterative_{attribute_list_iterative}", output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p)
+            )
+        elif method in ("madlib", "tem"):
+            _run_anonymizer_loop(
+                anonymizers[i], profiles, f"{method}_eps{epsilon}", output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p["text"], scenario=p["scenario"])
+            )
+        elif method == "dp_prompt_gpt":
+            _run_anonymizer_loop(
+                anonymizers[i], profiles, f"dp_prompt_gpt_temp{temperature}", output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p["text"], scenario=p["scenario"])
+            )
         else:
-            anonymizer = anonymizers[i]
-            for profile in tqdm(profiles):
-                if timing_flag:
-                    start_time = time.perf_counter()
-                anon_text = anonymizer.anonymize(profile["text"], scenario=profile["scenario"])
-                if timing_flag:
-                    end_time = time.perf_counter()
-                    profile[f"runtime_{anon_methods[i]}"] = end_time - start_time
-                profile[f"text_anon_{anon_methods[i]}"] = anon_text
-            write_output_async(output_file, profiles)
+            _run_anonymizer_loop(
+                anonymizers[i], profiles, method, output_file, timing_flag, utility_flag,
+                lambda a, p: a.anonymize(p["text"], scenario=p["scenario"])
+            )
 
     write_output_async(output_file, profiles)
 
@@ -238,6 +167,7 @@ if __name__ == "__main__":
     parser.add_argument("--level", type=int, default=1)
     parser.add_argument("--timing", type=int, default=0)
     parser.add_argument("--attribute_list", type=str, default="ours")
+    parser.add_argument("--language", type=str, default="English")
     args = parser.parse_args()
 
     DATA_PATH = args.data_path
@@ -252,6 +182,7 @@ if __name__ == "__main__":
     SCENARIO = args.scenario
     LEVEL = args.level
     TIMING_FLAG = args.timing
+    LANGUAGE = args.language
 
     profiles = []
     with open(DATA_PATH, "r") as f:
@@ -263,6 +194,7 @@ if __name__ == "__main__":
         ANON_METHODS,
         RESULTS_PATH,
         SCENARIO,
+        LANGUAGE,
         LEVEL,
         gemini_version=GEMINI_VERSION,
         llama_version=LLAMA_VERSION,

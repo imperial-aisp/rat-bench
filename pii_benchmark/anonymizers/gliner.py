@@ -71,7 +71,7 @@ class GlinerAnonymizer(Anonymizer):
         self.analyzer.registry.add_recognizer(titles_recognizer)
         self.analyzer.registry.add_recognizer(sex_recognizer)
 
-    def anonymize(self, text: str, attributes: List[str] = None) -> str:
+    def anonymize(self, text: str, scenario: str = "", attributes: str = "") -> str:
         # Analyze
 
         if len(text)<1000:

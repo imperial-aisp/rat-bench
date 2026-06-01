@@ -30,14 +30,14 @@ class GeminiAnonymizer(Anonymizer):
         self.model_version = model_version
         self.attributes = attributes
 
-    def anonymize(self, text: str, scenario: str = None) -> str:
+    def anonymize(self, text: str, scenario: str = "") -> str:
         client = genai.Client(api_key=gemini_api_key)
 
         if scenario is None:
             scenario = self.scenario
             
         prompt = get_anonymization_prompt(
-            self.prompt_type, text, self.attributes, scenario
+            self.prompt_type, text, self.attributes, scenario=scenario
         )
 
         for attempt in range(1, MAX_RETRIES + 1):
@@ -45,10 +45,12 @@ class GeminiAnonymizer(Anonymizer):
                 response = client.models.generate_content(
                     model=f"gemini-{self.model_version}", contents=prompt + text
                 )
-
-                return response.text
+                if response.text is not None:
+                    return response.text
+                else:
+                    raise Exception("No content generated")
             except Exception as e:
-                if "503" in str(e) or "overloaded" in str(e).lower():
+                if "503" in str(e) or "overloaded" in str(e).lower() or "no content generated" in str(e).lower():
                     wait = min(MAX_DELAY, BASE_DELAY * (2 ** (attempt - 1)))
                     # Add jitter to avoid stampeding the server
                     wait += random.uniform(0, 1)
@@ -59,3 +61,4 @@ class GeminiAnonymizer(Anonymizer):
                 else:
                     # ❌ If it's some other error, stop trying
                     raise
+        return text

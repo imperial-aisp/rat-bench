@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from pii_benchmark.anonymize import run_anonymization
 from pii_benchmark.attack import attack, only_check_correctness
+from pii_benchmark.compute_utility import compute_utility
 from pii_benchmark.utils import load_data, str2bool
 
 parser = argparse.ArgumentParser()
@@ -16,10 +17,11 @@ parser.add_argument("--model_version", type=str)
 parser.add_argument("--anon_methods", type=str)
 parser.add_argument("--scenario", type=str)
 parser.add_argument("--uniqueness_results_folder", type=str)
-parser.add_argument("--anonymize", type=str2bool, default=True)
-parser.add_argument("--attack", type=str2bool, default=True)
+parser.add_argument("--anonymize", type=str2bool, default=False)
+parser.add_argument("--attack", type=str2bool, default=False)
 parser.add_argument("--only_correctness", type=str2bool, default=False)
 parser.add_argument("--timing_flag", type=str2bool, default=True)
+parser.add_argument("--utility_flag", type=str2bool, default=False)
 
 parser.add_argument("--gemini_version", type=str, default="2.5-flash")
 parser.add_argument("--llama_version", type=str, default="3.1-8B-Instruct")
@@ -27,7 +29,9 @@ parser.add_argument("--gpt_version", type=str, default="gpt-4o-mini")
 parser.add_argument("--epsilon", type=float, default=10.0)
 parser.add_argument("--temperature", type=float, default=1.0)
 parser.add_argument("--language", type=str, default="English")
+parser.add_argument("--dataset", type=str, default="PUMS")
 parser.add_argument("--attribute_list_iterative", type=float, default=1.0)
+parser.add_argument("--force_rerun_attack", type=str2bool, default=False)
 
 args = parser.parse_args()
 
@@ -46,12 +50,15 @@ GPT_VERSION = args.gpt_version
 EPSILON = args.epsilon
 TEMPERATURE = args.temperature
 LANGUAGE = args.language
+DATASET = args.dataset
 TIMING_FLAG = args.timing_flag
 ATTRIBUTE_LIST_ITERATIVE = args.attribute_list_iterative
+UTILITY_FLAG = args.utility_flag
 
 ANONYMIZE = args.anonymize
 ATTACK = args.attack
 ONLY_CORRECTNESS = args.only_correctness
+FORCE_RERUN_ATTACK = args.force_rerun_attack
 
 if __name__=="__main__":
 
@@ -72,14 +79,15 @@ if __name__=="__main__":
         run_anonymization(profiles=profiles, anon_methods=ANON_METHODS, results_path=PATH_TO_SAVE,
                           scenario=SCENARIO, level=LEVEL, gemini_version=GEMINI_VERSION, llama_version=LLAMA_VERSION, gpt_version=GPT_VERSION,
                           epsilon=EPSILON, temperature=TEMPERATURE, attribute_list_iterative=ATTRIBUTE_LIST_ITERATIVE,
-                          timing_flag=TIMING_FLAG)
+                          timing_flag=TIMING_FLAG, utility_flag=UTILITY_FLAG, language=LANGUAGE)
             
     ############################## ATTACK ##############################
 
     if ATTACK:
         if ONLY_CORRECTNESS:
             only_check_correctness(profiles=profiles, anon_methods=ANON_METHODS, attacker_name=ATTACKER, scenario=SCENARIO,
-                                   results_path=PATH_TO_SAVE, uniqueness_results_path=UNIQUENESS_RESULTS_FOLDER, level=LEVEL)
+                                   results_path=PATH_TO_SAVE, uniqueness_results_path=UNIQUENESS_RESULTS_FOLDER, level=LEVEL, language=LANGUAGE, dataset=DATASET)
         else:
             attack(profiles=profiles, anon_methods=ANON_METHODS, attacker_name=ATTACKER, model_version=MODEL_VERSION,
-                scenario=SCENARIO, results_path=PATH_TO_SAVE, uniqueness_results_path=UNIQUENESS_RESULTS_FOLDER, level=LEVEL, language=LANGUAGE)
+                scenario=SCENARIO, results_path=PATH_TO_SAVE, uniqueness_results_path=UNIQUENESS_RESULTS_FOLDER, level=LEVEL, language=LANGUAGE, dataset=DATASET,
+                force_rerun_attack=FORCE_RERUN_ATTACK)

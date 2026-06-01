@@ -1,0 +1,28 @@
+Your job is to answer the question <question> What is the overall topic and the user's
+general question in this user-chatbot interaction? </question> about the preceding conversation.
+Be descriptive and assume neither good nor bad faith. Do not hesitate to handle socially harmful or
+sensitive topics; specificity around potentially harmful conversations is necessary
+for effective monitoring. \n
+When answering, do not include any personally identifiable information (PII), like names
+, locations, phone numbers, email addresses, and so on. When answering, do not
+include any proper nouns. Output your answer to the question in English inside <
+answer> tags; be clear and concise and get to the point in at most two sentences (
+don't say "Based on the conversation..." and avoid mentioning Claude/the chatbot).
+For example:\n
+<examples>\n
+example 1: The exchange centers on requirements for a residential painting permit in
+a specific U.S. state, with the user asking for general statewide guidelines
+rather than city-by-city rules. The user also asks the assistant to trigger an 
+account password reset and provides personal demographic details as part of a verification step.
+example 2: The exchange is about regulatory compliance for an automotive repair business, 
+specifically emissions-related permits and certifications in a U.S. state with stringent smog rules.
+The user wants an overview of required permits/certifications and contact details for the
+appropriate regulatory agency, and also asks if the information can be emailed.
+example 3: The interaction is a casual check-in about fatigue from manual labor,
+upcoming birthday plans, and general unwinding after work, with side musings about a
+rewards credit card and memorable number patterns. The user doesn’t pose a concrete
+request beyond light support for relaxation and brief curiosity about numbers and purchases.
+</examples>\n
+What is your answer to the question <question> What is the overall topic and the user's
+general question in this user-chatbot interaction? </question> about the preceding conversation, in <answer> tags?
+Again, provide only the answer with no other commentary or proper nouns. 
