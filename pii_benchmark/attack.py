@@ -66,7 +66,7 @@ def attack(profiles, anon_methods, attacker_name, model_version, scenario,
                 profile[f"guesses_{anon_method}_{attacker_name}"] = guesses[profile["id"]]
                 profile[f"prompts_{anon_method}_{attacker_name}"] = prompts[profile["id"]]
             
-            write_output_async(f"{results_path}/level_{level}.jsonl", profiles)
+            write_output(f"{results_path}/level_{level}.jsonl", profiles)
 
         if scenario in ["Concert ticket purchase", "Tourist information chatbot"]:
             print("Inferring public info for concert ticket purchase scenario")
@@ -93,14 +93,14 @@ def attack(profiles, anon_methods, attacker_name, model_version, scenario,
                 profile[f"guesses_public_info_{anon_method}_{attacker_name}"] = guesses[profile["id"]]
                 profile[f"correctness_public_info_{anon_method}_{attacker_name}"] = correctness[profile["id"]]
                 profile[f"prompts_public_info_{anon_method}_{attacker_name}"] = prompts[profile["id"]]
-            write_output_async(f"{results_path}/level_{level}.jsonl", profiles)
+            write_output(f"{results_path}/level_{level}.jsonl", profiles)
         else:
             print(f"Not inferring public info since scenario is not concert ticket purchase, it's {scenario}")
 
     suff = attacker_name
     profiles = check_guess_correctness(profiles, anon_methods, attacker_name=suff)
 
-    write_output_async(f"{results_path}/level_{level}.jsonl", profiles)
+    write_output(f"{results_path}/level_{level}.jsonl", profiles)
 
     compute_reid_risk(profiles=profiles, methods=anon_methods, attacker=attacker_name,
                       results_path=f"{uniqueness_results_path}/{scenario}/level_{level}_attacker_{attacker_name}.pickle",

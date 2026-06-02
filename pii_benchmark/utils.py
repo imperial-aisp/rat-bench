@@ -464,51 +464,57 @@ def parse_output_gpt(response):
 
     i = 0
 
-    while i<len(output_lines):
-        curr_line = output_lines[i]
-        if curr_line=="{" or curr_line=="" or curr_line=="},":
-            i += 1
-        else:
-            elements = curr_line.split(":")
-            key = elements[0].strip(' ",\'')
-            if key in att_names:
-                    
-                curr_guess_dict = dict()
-                
-                ## i+1
-                j = i+1
-                next_line_els = output_lines[j].split(":",1)
-                if next_line_els[0].strip(' ",\'').lower()=="inference":
-                    curr_guess_dict["Inference"] = next_line_els[1].strip(' ",\'')
-                elif next_line_els[0].strip(' ",\'').lower()=="guess":
-                    curr_guess_dict["Guess"] = next_line_els[1].strip(' ",\'')
-                elif next_line_els[0].strip(' ",\'').lower()=="certainty":
-                    curr_guess_dict["Certainty"] = next_line_els[1].strip(' ",\'')
-                
-                ## i+2
-                j = i+2
-
-                next_line_els = output_lines[j].split(":",1)
-                if next_line_els[0].strip(' ",\'').lower()=="inference":
-                    curr_guess_dict["Inference"] = next_line_els[1].strip(' ",\'')
-                elif next_line_els[0].strip(' ",\'').lower()=="guess":
-                    curr_guess_dict["Guess"] = next_line_els[1].strip(' ",\'')
-                elif next_line_els[0].strip(' ",\'').lower()=="certainty":
-                    curr_guess_dict["Certainty"] = next_line_els[1].strip(' ",\'')
-                ## i+3
-                j = i+3
-
-                next_line_els = output_lines[j].split(":",1)
-                if next_line_els[0].strip(' ",\'').lower()=="inference":
-                    curr_guess_dict["Inference"] = next_line_els[1].strip(' ",\'')
-                elif next_line_els[0].strip(' ",\'').lower()=="guess":
-                    curr_guess_dict["Guess"] = next_line_els[1].strip(' ",\'')
-                elif next_line_els[0].strip(' ",\'').lower()=="certainty":
-                    curr_guess_dict["Certainty"] = next_line_els[1].strip(' ",\'')
-                guess_dict[get_att_key(key)] = curr_guess_dict
-                i += 4
-            else:
+    try:
+        while i<len(output_lines):
+            curr_line = output_lines[i]
+            if curr_line=="{" or curr_line=="" or curr_line=="},":
                 i += 1
+            else:
+                elements = curr_line.split(":")
+                key = elements[0].strip(' ",\'')
+                if key in att_names:
+                        
+                    curr_guess_dict = dict()
+                    
+                    ## i+1
+                    j = i+1
+                    next_line_els = output_lines[j].split(":",1)
+                    if next_line_els[0].strip(' ",\'').lower()=="inference":
+                        curr_guess_dict["Inference"] = next_line_els[1].strip(' ",\'')
+                    elif next_line_els[0].strip(' ",\'').lower()=="guess":
+                        curr_guess_dict["Guess"] = next_line_els[1].strip(' ",\'')
+                    elif next_line_els[0].strip(' ",\'').lower()=="certainty":
+                        curr_guess_dict["Certainty"] = next_line_els[1].strip(' ",\'')
+                    
+                    ## i+2
+                    j = i+2
+
+                    next_line_els = output_lines[j].split(":",1)
+                    if next_line_els[0].strip(' ",\'').lower()=="inference":
+                        curr_guess_dict["Inference"] = next_line_els[1].strip(' ",\'')
+                    elif next_line_els[0].strip(' ",\'').lower()=="guess":
+                        curr_guess_dict["Guess"] = next_line_els[1].strip(' ",\'')
+                    elif next_line_els[0].strip(' ",\'').lower()=="certainty":
+                        curr_guess_dict["Certainty"] = next_line_els[1].strip(' ",\'')
+                    ## i+3
+                    j = i+3
+
+                    next_line_els = output_lines[j].split(":",1)
+                    if next_line_els[0].strip(' ",\'').lower()=="inference":
+                        curr_guess_dict["Inference"] = next_line_els[1].strip(' ",\'')
+                    elif next_line_els[0].strip(' ",\'').lower()=="guess":
+                        curr_guess_dict["Guess"] = next_line_els[1].strip(' ",\'')
+                    elif next_line_els[0].strip(' ",\'').lower()=="certainty":
+                        curr_guess_dict["Certainty"] = next_line_els[1].strip(' ",\'')
+                    guess_dict[get_att_key(key)] = curr_guess_dict
+                    i += 4
+                else:
+                    i += 1
+    except Exception as e:
+        print(f"Error occurred while parsing output: {e}")
+        print("Output was:")
+        for line in output_lines:
+            print(line)
     return guess_dict
      
 def parse_output(response):
