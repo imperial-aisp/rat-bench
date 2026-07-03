@@ -17,6 +17,7 @@ from pii_benchmark.anonymizers.gpt_anon import GPTAnonymizer
 from pii_benchmark.anonymizers.madlib import MadlibAnonymizer
 from pii_benchmark.anonymizers.tem import TEMAnonymizer
 from pii_benchmark.anonymizers.dp_prompt_gpt import DPPromptAnonymizer
+from pii_benchmark.anonymizers.openaifilter import OpenAIAnonymizer
 
 def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymizer:
     match method:
@@ -123,6 +124,8 @@ def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymi
             return DPPromptAnonymizer(model_version=kwargs["gpt_version"], temperature=kwargs["temperature"])
         case "eu_guardrail":
             return EUGuardrailAnonymizer()
+        case "openaifilter":
+            return OpenAIAnonymizer(attributes=attributes)
         #### new anonymizer here
         case _:
             raise ValueError(f"Unknown anonymizer: {method!r}")
