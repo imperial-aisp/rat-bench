@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=0.71.0",
     "google-api-core>=2.25.1",
     "azure-ai-textanalytics>=5.3.0",
     "google-genai>=1.31.0",

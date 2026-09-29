@@ -1,6 +1,8 @@
 from typing import List
 
 from pii_benchmark.anonymizers.anonymizer import Anonymizer
+from pii_benchmark.anonymizers.anthropic import AnthropicAnonymizer
+from pii_benchmark.anonymizers.anthropic import AnthropicAnonymizer
 from pii_benchmark.anonymizers.azure import AzureAnonymizer
 from pii_benchmark.anonymizers.euguardrail import EUGuardrailAnonymizer
 from pii_benchmark.anonymizers.gemini import GeminiAnonymizer
@@ -10,6 +12,7 @@ from pii_benchmark.anonymizers.llama import LlamaAnonymizer
 from pii_benchmark.anonymizers.llamaclio import LlamaClioAnonymizer
 from pii_benchmark.anonymizers.presidio import PresidioAnonymizer
 from pii_benchmark.anonymizers.llamarescriber import LlamaRescriberAnonymizer
+from pii_benchmark.anonymizers.privacyfilter import PrivacyFilterAnonymizer
 from pii_benchmark.anonymizers.scrubadub import ScrubadubAnonymizer
 from pii_benchmark.anonymizers.textwash import TextWashAnonymizer
 from pii_benchmark.anonymizers.uniner import UninerAnonymizer
@@ -52,6 +55,19 @@ def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymi
                                     prompt_type="anthropic_attributes")
         case "gemini_public":
             return GeminiAnonymizer(attributes=None, prompt_type="public_info", model_version=kwargs["gemini_version"])
+        case "anthropic_basic":
+            return AnthropicAnonymizer(attributes=None, prompt_type="anthropic", model_version=kwargs["anthropic_version"])
+        case "anthropic_full":
+            return AnthropicAnonymizer(attributes=["SSN", "phone number", "credit card number", "email", "name", "address", \
+                                            "race", "citizenship status", "educational attainment", "state of residence", "occupation", \
+                                            "marital status", "employment status", "date of birth", "age"], model_version=kwargs["anthropic_version"], 
+                                    prompt_type="anthropic_attributes")
+        case "anthropic_public":
+            return AnthropicAnonymizer(attributes=None, prompt_type="public_info", model_version=kwargs["anthropic_version"])
+        case "anthropic_rescriber":
+            return AnthropicAnonymizer(attributes=None, prompt_type="rescriber", model_version=kwargs["anthropic_version"])
+        case "anthropic_clio":
+            return AnthropicAnonymizer(attributes=None, prompt_type="clio", model_version=kwargs["anthropic_version"])
         case "azure":
             return AzureAnonymizer()
         case "azure_es":
@@ -94,7 +110,10 @@ def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymi
         case "llama_clio":
             return LlamaClioAnonymizer(attributes=None, prompt_type="clio", scenario=kwargs["scenario"])
         case "llama_rescriber":
-            return LlamaRescriberAnonymizer(attributes=None, prompt_type="rescriber", scenario=kwargs["scenario"])
+            # Same checkpoint as the llama_* methods, so it shares their vLLM
+            # engine -- but only if it asks for the same version.
+            return LlamaRescriberAnonymizer(attributes=None, prompt_type="rescriber", scenario=kwargs["scenario"],
+                                            model_version=kwargs.get("llama_version") or "3.1-8B-Instruct")
         case "gpt":
             return GPTAnonymizer(attributes=["SSN", "phone number", "credit card number", "email", "name", "address"],
                                  prompt_type="anthropic_attributes", model_version=kwargs["gpt_version"])
@@ -123,6 +142,8 @@ def get_anonymizer(method: str, attributes: List[str]=None, **kwargs) -> Anonymi
             return DPPromptAnonymizer(model_version=kwargs["gpt_version"], temperature=kwargs["temperature"])
         case "eu_guardrail":
             return EUGuardrailAnonymizer()
+        case "privacy_filter":
+            return PrivacyFilterAnonymizer()
         #### new anonymizer here
         case _:
             raise ValueError(f"Unknown anonymizer: {method!r}")

@@ -1,6 +1,7 @@
 from typing import List
 import anthropic
 from pii_benchmark.anonymizers.anonymizer import Anonymizer
+from pii_benchmark.anonymizers.gpt_anon import parse_results_rescriber
 from pii_benchmark.prompts import get_anonymization_prompt
 
 from pii_benchmark.credentials import anthropic_api_key
@@ -9,31 +10,43 @@ from pii_benchmark.credentials import anthropic_api_key
 class AnthropicAnonymizer(Anonymizer):
     def __init__(
         self,
-        method: str,
-        base_prompt: str,
-        model_version: str = "claude-opus-4-1-20250805",
+        model_version: str = "claude-haiku-4-5-20251001",
         attributes: List[str]|None = None,
         language: str = "English",
+        prompt_type: str = "anthropic"
     ):
         super().__init__()
-        self.method = method
-        self.base_prompt = base_prompt
         self.model_version = model_version
         self.attributes = attributes
         self.language = language
+        self.prompt_type = prompt_type
         self.client = anthropic.Anthropic(api_key=anthropic_api_key)
 
     def anonymize(self, text: str, scenario: str = "medical") -> str:
-        base_prompt = get_anonymization_prompt(self.method, text, self.attributes, scenario=scenario, language=self.language)
+        base_prompt = get_anonymization_prompt(self.prompt_type, text, self.attributes, scenario=scenario, language=self.language)
 
         message = self.client.messages.create(
             model=self.model_version,
-            max_tokens=1000,
-            temperature=0,
+            max_tokens=3000,
             system=base_prompt,
             messages=[
                 {"role": "user", "content": [{"type": "text", "text": text}]}
             ],
         )
 
-        return message.content[0].text
+        out = message.content[0].text
+
+        if self.prompt_type=="rescriber":
+            redacted_text = text
+            entities = parse_results_rescriber(out)
+            # print("entities:" + str(entities))
+            if len(entities) > 0 and "results" in entities[0]:
+                entities = entities[0]["results"]
+            for e in entities:
+                entity_text = e["text"]
+                redacted_text = redacted_text.replace(entity_text, "*" * len(entity_text))
+            anon_text = redacted_text
+        else:
+            anon_text = out
+
+        return anon_text

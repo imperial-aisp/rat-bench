@@ -457,7 +457,41 @@ def get_att_key(att: str) -> str:
     else:
         return att
 
-def parse_output_gpt(response):
+def _manual_parse_fallback(output_lines, partial_dict):
+    """Prompt the user to manually enter parsed fields after an automatic parse failure."""
+    print("\n--- RAW MODEL OUTPUT ---")
+    for line in output_lines:
+        print(line)
+    print("--- END OF OUTPUT ---\n")
+    print("Automatic parsing failed. Enter values manually.")
+    print("For each attribute, provide Inference, Guess, and Certainty.")
+    print("Press Enter to leave a field empty. Type 'skip' as the attribute name to skip remaining attributes.\n")
+
+    guess_dict = dict(partial_dict)
+
+    while True:
+        att = input("Attribute name (or 'skip' to finish): ").strip()
+        if att.lower() == "skip" or att == "":
+            break
+        att_key = get_att_key(att)
+        curr_guess_dict = {}
+        inference = input(f"  Inference for '{att}': ").strip()
+        if inference:
+            curr_guess_dict["Inference"] = inference
+        guess = input(f"  Guess for '{att}': ").strip()
+        if guess:
+            curr_guess_dict["Guess"] = guess
+        certainty = input(f"  Certainty for '{att}': ").strip()
+        if certainty:
+            curr_guess_dict["Certainty"] = certainty
+        if curr_guess_dict:
+            guess_dict[att_key] = curr_guess_dict
+            print(f"  -> Saved '{att_key}': {curr_guess_dict}\n")
+
+    return guess_dict
+
+
+def parse_output_gpt(response, interactive=False):
     output_lines = response.splitlines()
 
     guess_dict = dict()
@@ -473,9 +507,9 @@ def parse_output_gpt(response):
                 elements = curr_line.split(":")
                 key = elements[0].strip(' ",\'')
                 if key in att_names:
-                        
+
                     curr_guess_dict = dict()
-                    
+
                     ## i+1
                     j = i+1
                     next_line_els = output_lines[j].split(":",1)
@@ -485,7 +519,7 @@ def parse_output_gpt(response):
                         curr_guess_dict["Guess"] = next_line_els[1].strip(' ",\'')
                     elif next_line_els[0].strip(' ",\'').lower()=="certainty":
                         curr_guess_dict["Certainty"] = next_line_els[1].strip(' ",\'')
-                    
+
                     ## i+2
                     j = i+2
 
@@ -512,9 +546,12 @@ def parse_output_gpt(response):
                     i += 1
     except Exception as e:
         print(f"Error occurred while parsing output: {e}")
-        print("Output was:")
-        for line in output_lines:
-            print(line)
+        if interactive:
+            guess_dict = _manual_parse_fallback(output_lines, guess_dict)
+        else:
+            print("Output was:")
+            for line in output_lines:
+                print(line)
     return guess_dict
      
 def parse_output(response):

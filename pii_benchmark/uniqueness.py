@@ -198,6 +198,10 @@ def process_col(c, guess_correctness, ground_truth, cols_to_fit):
                     f == "CON-MISCELLANEOUS EXTRACTION WORKERS, INCLUDING ROOF BOLTERS AND HELPERS"
                 ):
                     val = "346"
+                elif (
+                    f == "CON-EARTH DRILLERS, EXCEPT OIL AND GAS"
+                ):
+                    val = "411"  
                 else:
                     val = inverse_map[f]
         elif c == "AGEP":
@@ -398,7 +402,86 @@ def fit_model_and_compute(cols_to_fit: List[str], record_to_analyze: List[int], 
     return correctness, iu, model
 
 
-def compute_reid_risk(profiles, methods, attacker, results_path, dataset="PUMS"):
+REID_CORRECTNESS_THRESHOLD = 0.2
+
+
+def _is_reided(n_direct_ids: np.ndarray, correctness: np.ndarray) -> np.ndarray:
+    """A profile counts as reidentified if a direct identifier was guessed,
+    or if the CorrectMatch correctness score clears the threshold."""
+    return (n_direct_ids > 0) | (correctness >= REID_CORRECTNESS_THRESHOLD)
+
+
+def bootstrap_reidentification_rate(
+    correctness_dict,
+    correct_direct_ids,
+    methods,
+    n_bootstrap: int = 1000,
+    confidence: float = 0.95,
+    seed: int | None = None,
+):
+    """Bootstrap CI/std for the reidentification rate.
+
+    Resamples profiles with replacement and recomputes the reidentification
+    rate from the *already computed* per-profile CorrectMatch correctness
+    scores and direct-identifier hits. This does NOT re-run the attacker LLM
+    and does NOT refit any CorrectMatch model -- it only resamples the
+    per-profile outputs that `compute_reid_risk` already produced, so running
+    many bootstrap iterations is cheap.
+
+    Returns a dict keyed by method, each holding mean/std/CI of the
+    reidentification rate across bootstrap resamples plus the raw bootstrap
+    distribution (useful for plotting/inspection).
+    """
+    rng = np.random.default_rng(seed)
+    alpha = 1.0 - confidence
+
+    bootstrap_results = {}
+
+    for m in methods:
+        correctness = np.array(correctness_dict[m], dtype=float)
+        n_direct_ids = np.array([len(ids) for ids in correct_direct_ids[m]], dtype=int)
+        n_profiles = len(correctness)
+
+        if n_profiles == 0:
+            bootstrap_results[m] = {
+                "mean": float("nan"),
+                "std": float("nan"),
+                "ci_lower": float("nan"),
+                "ci_upper": float("nan"),
+                "n_bootstrap": n_bootstrap,
+                "confidence": confidence,
+                "bootstrap_rates": [],
+            }
+            continue
+
+        boot_rates = np.empty(n_bootstrap)
+        for b in range(n_bootstrap):
+            idx = rng.integers(0, n_profiles, size=n_profiles)
+            boot_rates[b] = _is_reided(n_direct_ids[idx], correctness[idx]).mean()
+
+        bootstrap_results[m] = {
+            "mean": float(boot_rates.mean()),
+            "std": float(boot_rates.std(ddof=1)),
+            "ci_lower": float(np.percentile(boot_rates, 100 * alpha / 2)),
+            "ci_upper": float(np.percentile(boot_rates, 100 * (1 - alpha / 2))),
+            "n_bootstrap": n_bootstrap,
+            "confidence": confidence,
+            "bootstrap_rates": boot_rates.tolist(),
+        }
+
+    return bootstrap_results
+
+
+def compute_reid_risk(
+    profiles,
+    methods,
+    attacker,
+    results_path,
+    dataset="PUMS",
+    n_bootstrap: int = 1000,
+    confidence: float = 0.95,
+    bootstrap_seed: int | None = None,
+):
     if dataset == "MEX":
         df = pd.read_csv("data/es/personas_sample_enc.csv", usecols=mex_cols)
         df = df.dropna().astype(int)
@@ -544,19 +627,22 @@ def compute_reid_risk(profiles, methods, attacker, results_path, dataset="PUMS")
     n_reided_per_method = dict()
 
     for m in results_dict["correct_direct_ids"].keys():
-        n_reided = 0
-
-        for i in range(len(results_dict["correctness"][m])):
-            n_direct_ids = len(results_dict["correct_direct_ids"][m][i])
-            correctness = results_dict["correctness"][m][i]
-            if n_direct_ids > 0:
-                n_reided += 1
-            else:
-                if correctness >= 0.2:
-                    n_reided += 1
-        n_reided_per_method[m] = n_reided / len(profiles)
+        correctness_arr = np.array(results_dict["correctness"][m], dtype=float)
+        n_direct_ids_arr = np.array(
+            [len(ids) for ids in results_dict["correct_direct_ids"][m]], dtype=int
+        )
+        n_reided_per_method[m] = _is_reided(n_direct_ids_arr, correctness_arr).mean() if len(profiles) else float("nan")
 
     results_dict["reidentification_rate"] = n_reided_per_method
+
+    results_dict["reidentification_rate_bootstrap"] = bootstrap_reidentification_rate(
+        correctness_dict=results_dict["correctness"],
+        correct_direct_ids=results_dict["correct_direct_ids"],
+        methods=results_dict["correct_direct_ids"].keys(),
+        n_bootstrap=n_bootstrap,
+        confidence=confidence,
+        seed=bootstrap_seed,
+    )
 
     Path(results_path).parent.mkdir(parents=True, exist_ok=True)
 
@@ -572,6 +658,12 @@ if __name__ == "__main__":
     parser.add_argument("--full_dataset", type=str, default="False")
     parser.add_argument("--attacker", type=str, default="False")
     parser.add_argument("--dataset", type=str, default="PUMS")
+    parser.add_argument("--n_bootstrap", type=int, default=1000,
+                        help="Number of bootstrap resamples for the reidentification rate CI")
+    parser.add_argument("--confidence", type=float, default=0.95,
+                        help="Confidence level for the bootstrap CI (e.g. 0.95)")
+    parser.add_argument("--bootstrap_seed", type=int, default=None,
+                        help="Seed for the bootstrap RNG (for reproducibility)")
     args = parser.parse_args()
 
     DATA_PATH = args.data_path
@@ -586,4 +678,8 @@ if __name__ == "__main__":
         for line in f:
             profiles.append(json.loads(line))
 
-    compute_reid_risk(profiles, METHODS, ATTACKER, RESULTS_PATH, dataset=DATASET)
+    compute_reid_risk(
+        profiles, METHODS, ATTACKER, RESULTS_PATH, dataset=DATASET,
+        n_bootstrap=args.n_bootstrap, confidence=args.confidence,
+        bootstrap_seed=args.bootstrap_seed,
+    )

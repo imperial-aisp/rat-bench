@@ -11,7 +11,8 @@ class GPTAttacker:
         self.client = OpenAI(api_key=openai_api_key)
 
     def infer(
-        self, text: str, attributes: List[str]|None = None, scenario: str = "medical", language: str = "English"
+        self, text: str, attributes: List[str]|None = None, scenario: str = "medical", language: str = "English",
+        interactive: bool = False
     ):
         # print(f"Inferring with GPT attacker, language = {language}")
         
@@ -30,7 +31,7 @@ class GPTAttacker:
                 max_output_tokens=4096,
         )
         model_guesses = response.output_text
-        model_guesses = parse_output_gpt(model_guesses)
+        model_guesses = parse_output_gpt(model_guesses, interactive=interactive)
         # print()
         return model_guesses, prompt
 
@@ -97,10 +98,17 @@ class GPTAttacker:
                 elif "Landmark:" in l:
                     landmark = l.split("Landmark:")[1].strip(", '")
 
+            print(f"Public info: {public_info}")
+            print(f"Guesses: artists = {artists}, venue = {venue}, city = {city}, landmark = {landmark}")
+
+            artist_key = "artists" if "artists" in public_info else "artist"
+
+            artist_gt = [a.lower() for a in public_info[artist_key]] if isinstance(public_info[artist_key], list) else [public_info[artist_key].lower()]
+
             correctness = {"artist1": 0, "artist2": 0, "venue": 0, "city": 0, "landmark": 0}
             if artists is not None:
                 for iartist, artist in enumerate(artists.split(",")):
-                    if artist is not None and (artist.lower() == public_info["artist"][0].lower() or artist.lower() == public_info["artist"][1].lower()):
+                    if artist is not None and (artist.lower() in artist_gt):
                         correctness[f"artist{iartist + 1}"] = 1
             if venue is not None and venue.lower() == public_info["venue"].lower():
                 correctness["venue"] = 1
@@ -119,6 +127,9 @@ class GPTAttacker:
                     landmark = l.split("Landmark:")[1].strip(", '")
                 elif "Opening Hours:" in l:
                     opening_hours = l.split("Opening Hours:")[1].strip(", '")
+
+            print(f"Public info: {public_info}")
+            print(f"Guesses: city = {city}, landmark = {landmark}, opening_hours = {opening_hours}")
 
             correctness = {"city": 0, "landmark": 0, "opening_hours": 0}
             if city is not None and city.lower() == public_info["city"].lower():
@@ -143,7 +154,16 @@ class GPTAttacker:
                     birthday = l.split("Birthday:")[1].strip(", '")
 
             correctness = {"figure": 0, "birthday": 0}
-            if figure is not None and figure.lower() == public_info["figure"].lower():
+
+            print(f"Public info: {public_info}")
+            print(f"Guesses: figure = {figure}, birthday = {birthday}")
+
+            if "public_figure" in public_info:
+                public_figure_gt = public_info["public_figure"].lower() 
+            else:
+                public_figure_gt = public_info["figure"].lower()
+
+            if figure is not None and figure.lower() == public_figure_gt:
                 correctness["figure"] = 1
             if birthday is not None and birthday.lower() == public_info["birthday"].lower():
                 correctness["birthday"] = 1

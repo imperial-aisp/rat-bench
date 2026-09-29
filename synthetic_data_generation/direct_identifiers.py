@@ -1,3 +1,5 @@
+import argparse
+import json
 import random
 from datetime import date
 import numpy as np
@@ -10,6 +12,18 @@ PATH_TO_DATA = "./data/"
 
 FIRST_NAME_DF = pd.read_csv(os.path.join(PATH_TO_DATA, "first_name_all_years.csv"))
 LAST_NAME_DF = pd.read_csv(os.path.join(PATH_TO_DATA, "last_name.csv"))
+
+# first_name_all_years.csv has gaps (e.g. no freq_1918, no freq_2018 column at
+# all) and doesn't cover every year down to get_full_name's min_year=1880
+# default (data starts at 1900) -- get_full_name() snaps to the nearest year
+# in this list rather than assuming freq_{yob} always exists.
+_AVAILABLE_NAME_YEARS = sorted(
+    int(c.split("_", 1)[1]) for c in FIRST_NAME_DF.columns if c.startswith("freq_")
+)
+
+
+def _nearest_available_name_year(yob):
+    return min(_AVAILABLE_NAME_YEARS, key=lambda y: abs(y - yob))
 
 # Mexican name data — loaded lazily so PUMS-only runs are unaffected
 _MEX_FIRST_NAME_DF = None
@@ -64,22 +78,35 @@ _MEX_STATE_CODES = [
     "YN", "ZS",
 ]
 
-def generate_curp() -> str:
-    """Generate a plausible but fake 18-character CURP."""
+def generate_curp(birth_year: int | None = None) -> str:
+    """Generate a plausible but fake 18-character CURP.
+
+    CURP encodes the holder's real birth date in date_part (YYMMDD) and
+    disambiguates century via a differentiating character at position 17
+    (a digit 0-9 for pre-2000 births, a letter for 2000+ -- real CURPs vary
+    which letter by a fuller homoclave rule, "A" here is just one valid
+    example). Pass the profile's actual birth_year so this doesn't
+    contradict the age/DOB already shown elsewhere in the profile; falls
+    back to an independently-random year and century marker if not given.
+    """
     letters = (
         random.choice("BCDFGHJKLMNPQRSTVWXYZ")
         + random.choice(_CURP_VOWELS)
         + random.choice("BCDFGHJKLMNPQRSTVWXYZ")
         + random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
     )
-    yy = random.randint(0, 99)
+    if birth_year is not None:
+        yy = birth_year % 100
+        century = "0" if birth_year < 2000 else "A"
+    else:
+        yy = random.randint(0, 99)
+        century = random.choice("0123456789A")
     mm = random.randint(1, 12)
     dd = random.randint(1, 28)
     date_part = f"{yy:02d}{mm:02d}{dd:02d}"
     sex_char = random.choice(["H", "M"])
     state = random.choice(_MEX_STATE_CODES)
     consonants = "".join(random.choice(_CURP_CONSONANTS) for _ in range(3))
-    century = random.choice("0123456789A")
     check = str(random.randint(0, 9))
     return letters + date_part + sex_char + state + consonants + century + check
 
@@ -132,12 +159,20 @@ def _jmbg_check(digits12: str) -> int:
     return 0 if k == 11 else k
 
 
-def generate_jmbg() -> str:
-    """Generate a plausible but fake 13-digit Serbian JMBG."""
+def generate_jmbg(birth_year: int | None = None) -> str:
+    """Generate a plausible but fake 13-digit Serbian JMBG.
+
+    JMBG encodes the holder's real birth date (DDMMGGG, where GGG is the
+    last 3 digits of the year -- a leading 9 means 1900s, a leading 0 means
+    2000s, which falls out automatically from taking the last 3 digits of
+    any 4-digit year). Pass the profile's actual birth_year so this doesn't
+    contradict the age/DOB already shown elsewhere in the profile; falls
+    back to a random 1970-2004 year if not given.
+    """
     while True:
         dd = random.randint(1, 28)
         mm = random.randint(1, 12)
-        yy = random.randint(1970, 2004)
+        yy = birth_year if birth_year is not None else random.randint(1970, 2004)
         yyy = str(yy)[-3:]
         rr = random.choice(_SRB_REGION_CODES)
         bbb = str(random.randint(500, 999))  # 500–999 = female range
@@ -221,14 +256,31 @@ def get_full_name_nl(sex: str) -> str:
     return f"{first} {last}"
 
 
-def generate_rrn() -> str:
-    """Generate a plausible but fake Belgian rijksregisternummer (YY.MM.DD-NNN.CC)."""
-    yy = random.randint(40, 99)
+def generate_rrn(birth_year: int | None = None) -> str:
+    """Generate a plausible but fake Belgian rijksregisternummer (YY.MM.DD-NNN.CC).
+
+    RRN encodes the holder's real birth date, and its checksum depends on
+    century: for 2000+ births the 9-digit base is conceptually prefixed
+    with "2" (i.e. treated as 2,000,000,000 + base) before the mod-97
+    check, while pre-2000 births use the 9-digit base directly. Pass the
+    profile's actual birth_year so this doesn't contradict the age/DOB
+    already shown elsewhere in the profile -- this matters here more than
+    for JMBG/CURP, since real NL survey ages in this dataset can be single
+    digits, i.e. genuinely born in the 2000s, not just theoretically so.
+    Falls back to a random pre-2000 year (simpler checksum case) if not given.
+    """
+    if birth_year is not None:
+        yy = birth_year % 100
+        post_2000 = birth_year >= 2000
+    else:
+        yy = random.randint(40, 99)
+        post_2000 = False
     mm = random.randint(1, 12)
     dd = random.randint(1, 28)
     nnn = random.randint(1, 998)
     base = int(f"{yy:02d}{mm:02d}{dd:02d}{nnn:03d}")
-    cc = 97 - (base % 97)
+    checksum_base = base + 2_000_000_000 if post_2000 else base
+    cc = 97 - (checksum_base % 97)
     if cc == 0:
         cc = 97
     return f"{yy:02d}.{mm:02d}.{dd:02d}-{nnn:03d}.{cc:02d}"
@@ -287,10 +339,13 @@ def get_full_name(gender, age, min_year=1880, max_year=2024):
     
     year_today = date.today().year
     yob = year_today - int(age)
-    
+
     yob = max(yob, min_year)
     yob = min(yob, max_year)
-    
+
+    if f"freq_{yob}" not in FIRST_NAME_DF.columns:
+        yob = _nearest_available_name_year(yob)
+
     # sample first name
     sub_df = FIRST_NAME_DF[(FIRST_NAME_DF['gender'] == gender) & (FIRST_NAME_DF[f"freq_{yob}"] > 0)]
     first_name = np.random.choice(sub_df['first_name'].values, p=sub_df[f"freq_{yob}"].values)
@@ -482,3 +537,156 @@ def generate_birthday(age: int) -> str:
         + str(year_of_birth)
     )
     return DOB
+
+
+# ── Batch direct-identifier generation for the multilingual "new profiles" ────
+# Mirrors extend_seed_profiles.py::add_direct_identifiers for English: adds
+# name/national-ID/credit-card/phone/address columns to a raw profile
+# dataframe (one row per profile), using the age-consistent generators above
+# so the embedded birth date in JMBG/CURP/RRN matches each row's real age.
+#
+# These read the tiny sex-encoding maps directly (rather than importing the
+# decoding helpers from data.py) since data.py imports FROM this module --
+# importing back would be circular.
+
+def _invert_json_map(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return {v: k for k, v in json.load(f).items()}
+
+
+def add_direct_identifiers_srb(df: pd.DataFrame) -> pd.DataFrame:
+    """Add name/JMBG/credit card/phone/address columns to a Serbian raw
+    profile dataframe (must have an 'age' column; one row per profile).
+    All SRB profiles are from a women's survey, so name/JMBG generation
+    doesn't need a decoded sex value.
+    """
+    df = df.copy()
+    today_year = date.today().year
+    names, jmbgs, cards, phones, addresses = [], [], [], [], []
+    for _, row in df.iterrows():
+        birth_year = today_year - int(row["age"])
+        names.append(get_full_name_srb())
+        jmbgs.append(generate_jmbg(birth_year=birth_year))
+        cards.append(generate_card())
+        phones.append(generate_serbian_phone())
+        addresses.append(generate_serbian_address())
+    df["name"] = names
+    df["JMBG"] = jmbgs
+    df["credit card number"] = cards
+    df["phone number"] = phones
+    df["address"] = addresses
+    return df
+
+
+def add_direct_identifiers_mex(df: pd.DataFrame) -> pd.DataFrame:
+    """Add name/CURP/credit card/phone/address columns to a Mexican raw
+    profile dataframe (must have 'EDAD' and 'SEXO' columns; one row per profile).
+    """
+    df = df.copy()
+    today_year = date.today().year
+    sexo_map = _invert_json_map("./data/es/maps/SEXO_map.json")  # {1: "Mujer", 2: "Hombre"}
+    names, curps, cards, phones, addresses = [], [], [], [], []
+    for _, row in df.iterrows():
+        birth_year = today_year - int(row["EDAD"])
+        sexo = sexo_map.get(int(row["SEXO"]), "Hombre")
+        names.append(get_full_name_mex(sexo))
+        curps.append(generate_curp(birth_year=birth_year))
+        cards.append(generate_card())
+        phones.append(generate_mexican_phone())
+        addresses.append(generate_mexican_address())
+    df["name"] = names
+    df["CURP"] = curps
+    df["credit card number"] = cards
+    df["phone number"] = phones
+    df["address"] = addresses
+    return df
+
+
+def add_direct_identifiers_nl(df: pd.DataFrame) -> pd.DataFrame:
+    """Add name/RRN/credit card/phone/address columns to a Dutch raw
+    profile dataframe (must have 'age' and 'sex' columns; one row per profile).
+    """
+    df = df.copy()
+    today_year = date.today().year
+    sex_map = _invert_json_map("./data/nl/maps/sex_map.json")  # {1: "Female", 2: "Male"}
+    names, rrns, cards, phones, addresses = [], [], [], [], []
+    for _, row in df.iterrows():
+        birth_year = today_year - int(row["age"])
+        sex = sex_map.get(int(row["sex"]), "Male")
+        names.append(get_full_name_nl(sex))
+        rrns.append(generate_rrn(birth_year=birth_year))
+        cards.append(generate_card())
+        phones.append(generate_nl_phone())
+        addresses.append(generate_nl_address())
+    df["name"] = names
+    df["RRN"] = rrns
+    df["credit card number"] = cards
+    df["phone number"] = phones
+    df["address"] = addresses
+    return df
+
+
+# JMBG is a pure-digit string that can start with 0 (day 01-09, or a 2000s
+# birth year's "0YY" GGG field) -- a plain pd.read_csv() infers that whole
+# column as int64 and silently drops the leading digit (verified: strips it
+# on ~1/3 of a real 200-row batch). CURP/RRN are safe (they contain letters
+# or punctuation), so only JMBG needs this. Always load via
+# load_new_profiles_with_ids() below, not a bare pd.read_csv().
+_ID_COLUMN_DTYPES = {"srb": {"JMBG": str}, "mex": None, "nl": None}
+
+LANG_CONFIG = {
+    "srb": {
+        "input_csv": "data/srb/200_new_profiles.csv",
+        "output_csv": "data/srb/200_new_profiles_with_ids.csv",
+        "add_fn": add_direct_identifiers_srb,
+    },
+    "mex": {
+        "input_csv": "data/es/200_new_profiles.csv",
+        "output_csv": "data/es/200_new_profiles_with_ids.csv",
+        "add_fn": add_direct_identifiers_mex,
+    },
+    "nl": {
+        "input_csv": "data/nl/200_new_profiles.csv",
+        "output_csv": "data/nl/200_new_profiles_with_ids.csv",
+        "add_fn": add_direct_identifiers_nl,
+    },
+}
+
+
+def load_new_profiles_with_ids(lang: str) -> pd.DataFrame:
+    """Load a language's *_new_profiles_with_ids.csv with the correct dtype
+    for its national-ID column, so JMBG's leading zeros survive the round
+    trip. Use this instead of a bare pd.read_csv(LANG_CONFIG[lang]["output_csv"]).
+    """
+    cfg = LANG_CONFIG[lang]
+    return pd.read_csv(cfg["output_csv"], dtype=_ID_COLUMN_DTYPES[lang])
+
+
+def main(languages=("srb", "mex", "nl"), seed=None):
+    """Generate direct identifiers (name, national ID, credit card, phone,
+    address) for each language's newly-selected profiles (the *_new_profiles.csv
+    files produced by weighted_sampling_.py's n_new extension) and write them
+    back out as a new CSV alongside the input, with the identifier columns
+    appended. Never touches the original 100_profiles.csv for any language.
+    """
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+
+    for lang in languages:
+        cfg = LANG_CONFIG[lang]
+        print(f"[{lang}] Loading {cfg['input_csv']}...")
+        df = pd.read_csv(cfg["input_csv"])
+        print(f"[{lang}] Generating direct identifiers for {len(df)} profiles...")
+        df = cfg["add_fn"](df)
+        df.to_csv(cfg["output_csv"], index=False)
+        print(f"[{lang}] Wrote {len(df)} profiles with identifiers to {cfg['output_csv']}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--languages", type=str, default="srb,mex,nl",
+                        help="Comma-separated subset of srb,mex,nl to process.")
+    parser.add_argument("--seed", type=int, default=None)
+    args = parser.parse_args()
+    main(languages=[l.strip() for l in args.languages.split(",")], seed=args.seed)

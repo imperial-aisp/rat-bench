@@ -52,7 +52,7 @@ class UninerAnonymizer(Anonymizer):
             entities.extend(os)
         entities = [e for e in entities if e!='']
         for e in entities:
-            print(f"entity {e}")
+            # print(f"entity {e}")
             while e in redacted_text:
                 start = redacted_text.find(e)
                 end = start + len(e)

@@ -53,7 +53,7 @@ class GPTAnonymizer(Anonymizer):
         if pt=="rescriber":
             redacted_text = text
             entities = parse_results_rescriber(response.output_text)
-            print("entities:" + str(entities))
+            # print("entities:" + str(entities))
             if len(entities) > 0 and "results" in entities[0]:
                 entities = entities[0]["results"]
             for e in entities:

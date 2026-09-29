@@ -7,6 +7,7 @@ from random import sample
 from transformers import pipeline
 
 from pii_benchmark.anonymizers.anonymizer import Anonymizer
+from pii_benchmark.anonymizers.llama import _pipeline_dtype
 from pii_benchmark.evaluation import check_correctness, check_guesses_one_profile
 from pii_benchmark.prompts import get_staab_prompt, get_staab_prompt_llama
 from pii_benchmark.utils import parse_output, parse_output_gpt
@@ -308,7 +309,12 @@ class IterativeAnonymizerLlama(Anonymizer):
         super().__init__()
         self.model_version = model_version
         self.max_iters = max_iters
-        self.model = pipeline("text-generation", model=f"meta-llama/Llama-{model_version}")
+        self.model = pipeline(
+            "text-generation",
+            model=f"meta-llama/Llama-{model_version}",
+            dtype=_pipeline_dtype(),
+            device_map="auto",
+        )
 
     def anonymize(self, profile: dict) -> str:
         i = 0

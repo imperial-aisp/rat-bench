@@ -5,12 +5,13 @@ from pii_benchmark.prompts import get_staab_prompt
 from pii_benchmark.utils import parse_output_gpt
 
 class DeepSeekAttacker:
-    def __init__(self, model_version: str = "deepseek-chat"):
+    def __init__(self, model_version: str = "deepseek-v4-pro"):
         self.model_version = model_version
         self.client = OpenAI(api_key=deepseek_api_key, base_url="https://api.deepseek.com")
 
     def infer(
-        self, text: str, attributes: List[str] = None, scenario: str = "medical", language: str = "English"
+        self, text: str, attributes: List[str] = None, scenario: str = "medical", language: str = "English",
+        interactive: bool = False
     ):
         prompt = get_staab_prompt(attributes=attributes, text=text, scenario=scenario, language=language)
 
@@ -24,9 +25,12 @@ class DeepSeekAttacker:
         response = self.client.chat.completions.create(
                 model=self.model_version,
                 messages=chat,
-                max_tokens=4096,
+                max_tokens=8192,
+                stream=False,
+                reasoning_effort="medium"
         )
+        # print(f"{response=}")
         model_guesses = response.choices[0].message.content
-        model_guesses = parse_output_gpt(model_guesses)
-        print()
+        model_guesses = parse_output_gpt(model_guesses, interactive=interactive)
+        # print()
         return model_guesses, prompt

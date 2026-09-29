@@ -4,6 +4,7 @@ import random
 import numpy as np
 import json
 import pickle
+from datetime import date
 
 from synthetic_data_generation.direct_identifiers import (
     get_full_name_mex,
@@ -331,9 +332,13 @@ def get_mex_profile(sample, cols):
     # Retrieve decoded sex for name generation (default Hombre if unavailable)
     sexo = groundtruth.get("SEXO", "Hombre")
 
+    # CURP encodes a birth date -- derive it from this row's real age so it
+    # doesn't contradict the age/DOB already shown elsewhere in the profile.
+    birth_year = date.today().year - int(sample["EDAD"])
+
     # Generate direct identifiers programmatically
     name = get_full_name_mex(sexo)
-    curp = generate_curp()
+    curp = generate_curp(birth_year=birth_year)
     card = generate_card()
     phone = generate_mexican_phone()
     address = generate_mexican_address()
@@ -406,9 +411,13 @@ def get_srb_profile(sample, cols):
             if decoded not in SRB_SKIP_VALUES:
                 dataentry[human_name] = decoded
 
+    # JMBG encodes a birth date -- derive it from this row's real age so it
+    # doesn't contradict the age/DOB already shown elsewhere in the profile.
+    birth_year = date.today().year - int(sample["age"])
+
     # Generate direct identifiers programmatically
     name = get_full_name_srb()
-    jmbg = generate_jmbg()
+    jmbg = generate_jmbg(birth_year=birth_year)
     card = generate_card()
     phone = generate_serbian_phone()
     address = generate_serbian_address()
@@ -488,8 +497,15 @@ def get_nl_profile(sample, cols):
     # Decode sex for name generation (default Male if unavailable)
     sex = groundtruth.get("sex", "Male")
 
+    # RRN encodes a birth date -- derive it from this row's real age so it
+    # doesn't contradict the age/DOB already shown elsewhere in the profile.
+    # This dataset skews young (ages 1-18), so post-2000 births are common,
+    # not just a theoretical edge case -- generate_rrn's century-aware
+    # checksum handles that correctly.
+    birth_year = date.today().year - int(sample["age"])
+
     name  = get_full_name_nl(sex)
-    rrn   = generate_rrn()
+    rrn   = generate_rrn(birth_year=birth_year)
     card  = generate_card()
     phone = generate_nl_phone()
     addr  = generate_nl_address()
