@@ -9,4 +9,5 @@ python3 main.py --data_path="benchmark/" \
                 --scenario="medical" \
                 --uniqueness_results_folder="./results" \
                 --anonymize="False" \
+                --attack="True" \
                 --only_correctness="False"
